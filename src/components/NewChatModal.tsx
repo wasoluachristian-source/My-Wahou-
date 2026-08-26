@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { Search, UserPlus, X, MessageSquare, Hash, ShieldCheck, Copy, Check, Sparkles, AlertCircle } from 'lucide-react';
+import { UserPlus, X, MessageSquare, Hash, ShieldCheck, Copy, Check, AlertCircle } from 'lucide-react';
 import { UserProfile } from '../types';
 import { ADMIN_EMAIL, normalizeProfileTag, getContactDisplayName } from '../services/dbService';
+import { UserAvatar } from './UserAvatar';
 
 interface NewChatModalProps {
   isOpen: boolean;
@@ -20,7 +21,6 @@ export function NewChatModal({
 }: NewChatModalProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [copied, setCopied] = useState(false);
-  const [hasSearched, setHasSearched] = useState(false);
 
   if (!isOpen) return null;
 
@@ -123,10 +123,7 @@ export function NewChatModal({
             id="new-chat-search-tag-input"
             type="text"
             value={searchTerm}
-            onChange={(e) => {
-              setSearchTerm(e.target.value);
-              setHasSearched(true);
-            }}
+            onChange={(e) => setSearchTerm(e.target.value)}
             placeholder="Tapez l'identifiant exact (ex: #Spart20@)"
             className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-zinc-900 border border-zinc-800 text-white font-mono text-sm focus:border-violet-500 focus:outline-none placeholder-zinc-500 transition"
           />
@@ -169,16 +166,14 @@ export function NewChatModal({
                 className="p-3.5 rounded-2xl bg-zinc-900/80 hover:bg-violet-950/40 border border-zinc-800 hover:border-violet-500/40 cursor-pointer flex items-center justify-between transition group shadow-sm"
               >
                 <div className="flex items-center gap-3">
-                  <div className="relative">
-                    <img
-                      src={user.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100'}
-                      alt={user.displayName}
-                      className="w-12 h-12 rounded-full object-cover border border-violet-500/30"
-                    />
-                    {user.isOnline && (
-                      <span className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-emerald-500 border-2 border-zinc-950" />
-                    )}
-                  </div>
+                  <UserAvatar
+                    name={getContactDisplayName(user)}
+                    avatarUrl={user.avatarUrl}
+                    size="md"
+                    isOnline={user.isOnline}
+                    showOnlineStatus={true}
+                    isVIP={user.isVIP}
+                  />
                   <div>
                     <div className="font-bold text-sm text-white flex items-center gap-2">
                       {getContactDisplayName(user)}
@@ -209,4 +204,3 @@ export function NewChatModal({
     </div>
   );
 }
-

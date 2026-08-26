@@ -12,6 +12,8 @@ import {
   subscribeUserConversations,
   subscribeMessages,
   createOrGetDirectConversation,
+  updateUserPresenceInDb,
+  sendMessageToDb,
   INITIAL_USERS,
   ADMIN_EMAIL,
   isUserAdmin
@@ -32,6 +34,14 @@ import { AdminDashboard } from './components/AdminDashboard';
 import { UserProfileModal } from './components/UserProfileModal';
 import { NewChatModal } from './components/NewChatModal';
 import { WebLinkModal } from './components/WebLinkModal';
+import { WhatsAppPushBanner, WhatsAppPushData } from './components/WhatsAppPushBanner';
+import { FloatingChatBubble } from './components/FloatingChatBubble';
+import {
+  playNotificationChime,
+  playMessageClickSound,
+  showBrowserNotification,
+  requestPushNotificationPermission,
+} from './utils/soundUtils';
 
 import { ArrowLeft, MessageSquare, Shield, Share2, Zap } from 'lucide-react';
 
@@ -87,6 +97,21 @@ export default function App() {
   const [activeTargetUser, setActiveTargetUser] = useState<UserProfile | undefined>(undefined);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
 
+  // Last Active Contact for Chat Bubble ("Bulle flottante de discussion")
+  const [lastActiveContact, setLastActiveContact] = useState<UserProfile | null>(() => {
+    try {
+      const saved = localStorage.getItem('mywahou_last_contact');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+
+  // WhatsApp-style Top Push Banner State
+  const [whatsappPushData, setWhatsappPushData] = useState<WhatsAppPushData | null>(null);
+  const prevConversationsRef = useState<Record<string, number>>({})[0];
+  const initialLoadRef = useState({ loaded: false })[0];
+
   // Modals
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(!currentUser);
   const [isForfaitModalOpen, setIsForfaitModalOpen] = useState(false);
@@ -100,6 +125,43 @@ export default function App() {
 
   // Mobile navigation view state ('sidebar' | 'chat')
   const [mobileView, setMobileView] = useState<'sidebar' | 'chat'>('sidebar');
+
+  // Compute total unread messages count for visual notification badge (Pastille rouge)
+  const totalUnreadCount = conversations.reduce((acc, c) => {
+    if (!currentUser?.id) return acc;
+    return acc + (c.unreadCount?.[currentUser.id] || 0);
+  }, 0);
+
+  // User online presence heartbeat & window listener
+  useEffect(() => {
+    if (!currentUser?.id) return;
+
+    // Set online on load
+    updateUserPresenceInDb(currentUser.id, true);
+
+    const interval = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        updateUserPresenceInDb(currentUser.id, true);
+      }
+    }, 45000);
+
+    const handleVisibility = () => {
+      updateUserPresenceInDb(currentUser.id, document.visibilityState === 'visible');
+    };
+
+    const handleBeforeUnload = () => {
+      updateUserPresenceInDb(currentUser.id, false);
+    };
+
+    window.addEventListener('visibilitychange', handleVisibility);
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('visibilitychange', handleVisibility);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [currentUser?.id]);
 
   // Subscribe to Global App Settings from Firestore
   useEffect(() => {
@@ -126,11 +188,73 @@ export default function App() {
     return () => unsub();
   }, [currentUser?.id]);
 
-  // Subscribe to Conversations for Current User
+  // Subscribe to Conversations for Current User & Push Notification triggers
   useEffect(() => {
     if (!currentUser) return;
-    const unsub = subscribeUserConversations(currentUser.id, (convos) => {
-      setConversations(convos);
+    const unsub = subscribeUserConversations(
+      currentUser.id,
+      (convos) => {
+        setConversations(convos);
+
+      // Check for newly received incoming messages across conversations
+      if (initialLoadRef.loaded) {
+        convos.forEach((c) => {
+          const lastMsg = c.lastMessage;
+          const prevTime = prevConversationsRef[c.id] || 0;
+          if (
+            lastMsg &&
+            lastMsg.timestamp > prevTime &&
+            lastMsg.senderName !== currentUser.displayName &&
+            Date.now() - lastMsg.timestamp < 20000
+          ) {
+            // New incoming message!
+            const otherId = c.participantIds?.find((id) => id !== currentUser.id);
+            const target = allUsers.find(
+              (u) => u.id === otherId || u.email?.toLowerCase() === otherId?.toLowerCase()
+            );
+
+            // Trigger notification sound (click / chime)
+            playNotificationChime();
+
+            // Native Browser Push Notification
+            showBrowserNotification(
+              lastMsg.senderName,
+              lastMsg.type === 'voice'
+                ? '🎤 Note vocale reçue'
+                : lastMsg.type === 'image'
+                ? '🖼️ Photo reçue'
+                : lastMsg.text || 'Nouveau message reçu',
+              target?.avatarUrl
+            );
+
+            // Pop WhatsApp Push Banner if user is not looking at this conversation
+            if (activeSpace !== 'discussion' || activeConversationId !== c.id) {
+              setWhatsappPushData({
+                id: `push_${Date.now()}`,
+                senderName: lastMsg.senderName,
+                senderAvatar: target?.avatarUrl,
+                senderTag: target?.profileTag,
+                content: lastMsg.text || 'Nouveau message reçu',
+                type: lastMsg.type || 'text',
+                conversationId: c.id,
+                targetUser: target,
+                timestamp: lastMsg.timestamp,
+              });
+            }
+          }
+          if (lastMsg?.timestamp) {
+            prevConversationsRef[c.id] = lastMsg.timestamp;
+          }
+        });
+      } else {
+        // Record initial timestamps without triggering alerts
+        convos.forEach((c) => {
+          if (c.lastMessage?.timestamp) {
+            prevConversationsRef[c.id] = c.lastMessage.timestamp;
+          }
+        });
+        initialLoadRef.loaded = true;
+      }
 
       // Auto-select or refresh target user
       if (convos.length > 0) {
@@ -142,6 +266,10 @@ export default function App() {
             u => u.id === otherId || u.email?.toLowerCase() === otherId?.toLowerCase()
           );
           setActiveTargetUser(target);
+          if (target) {
+            setLastActiveContact(target);
+            localStorage.setItem('mywahou_last_contact', JSON.stringify(target));
+          }
         } else if (!activeTargetUser) {
           const current = convos.find(c => c.id === activeConversationId);
           if (current) {
@@ -149,13 +277,24 @@ export default function App() {
             const target = allUsers.find(
               u => u.id === otherId || u.email?.toLowerCase() === otherId?.toLowerCase()
             );
-            if (target) setActiveTargetUser(target);
+            if (target) {
+              setActiveTargetUser(target);
+              setLastActiveContact(target);
+              localStorage.setItem('mywahou_last_contact', JSON.stringify(target));
+            }
           }
         }
       }
     });
     return () => unsub();
-  }, [currentUser?.id, allUsers, activeConversationId, activeTargetUser]);
+  }, [currentUser?.id, allUsers, activeConversationId, activeTargetUser, activeSpace]);
+
+  // Request browser notification permission once user connects
+  useEffect(() => {
+    if (currentUser) {
+      requestPushNotificationPermission();
+    }
+  }, [currentUser?.id]);
 
   // Subscribe to Messages for the Active Conversation
   useEffect(() => {
@@ -172,15 +311,20 @@ export default function App() {
   // Select a conversation
   const handleSelectConversation = (convoId: string, targetUser?: UserProfile) => {
     setActiveConversationId(convoId);
+    let resolved = targetUser;
     if (targetUser) {
       setActiveTargetUser(targetUser);
     } else {
       const convo = conversations.find(c => c.id === convoId);
       const otherId = convo?.participantIds?.find(id => id !== currentUser?.id);
-      const resolvedTarget = allUsers.find(
+      resolved = allUsers.find(
         u => u.id === otherId || u.email?.toLowerCase() === otherId?.toLowerCase()
       );
-      setActiveTargetUser(resolvedTarget);
+      setActiveTargetUser(resolved);
+    }
+    if (resolved) {
+      setLastActiveContact(resolved);
+      localStorage.setItem('mywahou_last_contact', JSON.stringify(resolved));
     }
     setMobileView('chat');
   };
@@ -188,8 +332,30 @@ export default function App() {
   // Start new chat with chosen user
   const handleStartChatWithUser = async (targetUser: UserProfile) => {
     if (!currentUser) return;
-    const convoId = await createOrGetDirectConversation(currentUser.id, targetUser);
+    const convoId = await createOrGetDirectConversation(currentUser.id, targetUser, currentUser.email);
+    setLastActiveContact(targetUser);
+    localStorage.setItem('mywahou_last_contact', JSON.stringify(targetUser));
     handleSelectConversation(convoId, targetUser);
+  };
+
+  // Quick message send from floating chat bubble
+  const handleQuickSendMessage = async (targetUser: UserProfile, text: string) => {
+    if (!currentUser) return;
+    const convoId = await createOrGetDirectConversation(currentUser.id, targetUser, currentUser.email);
+    const newMsg: ChatMessage = {
+      id: `quick_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      conversationId: convoId,
+      senderId: currentUser.id,
+      senderName: currentUser.displayName,
+      senderAvatar: currentUser.avatarUrl,
+      senderTag: currentUser.profileTag,
+      type: 'text',
+      content: text,
+      timestamp: Date.now(),
+      isDelivered: true,
+      isRead: false,
+    };
+    await sendMessageToDb(newMsg, targetUser.id);
   };
 
   // Start Voice or Video Call
@@ -311,6 +477,7 @@ export default function App() {
           appSettings={appSettings}
           onOpenAdmin={() => setIsAdminModalOpen(true)}
           onOpenWebLink={() => setIsWebLinkModalOpen(true)}
+          unreadCount={totalUnreadCount}
         />
 
         {/* SPACE 1: DISCUSSIONS (Sidebar + Chat) */}
@@ -551,6 +718,38 @@ export default function App() {
         onClose={() => setIsWebLinkModalOpen(false)}
         appName={appSettings.appName || 'my Wahou'}
       />
+
+      {/* WHATSAPP-STYLE PUSH NOTIFICATION BANNER */}
+      <WhatsAppPushBanner
+        push={whatsappPushData}
+        onOpenChat={(convoId, targetUser) => {
+          setActiveSpace('discussion');
+          handleSelectConversation(convoId, targetUser);
+        }}
+        onClose={() => setWhatsappPushData(null)}
+      />
+
+      {/* FLOATING CHAT BUBBLE (CHAT HEAD POUR DERNIÈRE DISCUSSION) */}
+      {currentUser && lastActiveContact && (
+        <FloatingChatBubble
+          lastContact={lastActiveContact}
+          unreadCount={
+            conversations.find((c) =>
+              c.participantIds?.includes(lastActiveContact.id) ||
+              c.participantIds?.includes(lastActiveContact.email?.toLowerCase())
+            )?.unreadCount?.[currentUser.id] || 0
+          }
+          recentMessages={messages}
+          currentUserId={currentUser.id}
+          onOpenFullChat={(target) => {
+            setActiveSpace('discussion');
+            handleStartChatWithUser(target);
+          }}
+          onQuickSendMessage={(target, text) => {
+            handleQuickSendMessage(target, text);
+          }}
+        />
+      )}
     </div>
   );
 }

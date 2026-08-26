@@ -30,7 +30,8 @@ import {
   HelpCircle,
   Copy,
   Check,
-  Upload
+  Upload,
+  Database
 } from 'lucide-react';
 import { UserProfile, AppSettings } from '../types';
 import {
@@ -41,6 +42,7 @@ import {
   ADMIN_EMAIL
 } from '../services/dbService';
 import { compressImageFile } from '../utils/mediaUtils';
+import { AdminFirebaseManager } from './AdminFirebaseManager';
 
 interface AdminDashboardProps {
   currentUser: UserProfile;
@@ -57,7 +59,7 @@ export function AdminDashboard({
   onClose,
   onOpenWebLink,
 }: AdminDashboardProps) {
-  const [activeTab, setActiveTab] = useState<'services' | 'users' | 'branding' | 'broadcast' | 'telemetry'>('services');
+  const [activeTab, setActiveTab] = useState<'services' | 'database' | 'users' | 'branding' | 'broadcast' | 'telemetry'>('services');
   const [searchQuery, setSearchQuery] = useState('');
   const [filterRole, setFilterRole] = useState<'all' | 'vip' | 'blocked'>('all');
 
@@ -288,6 +290,19 @@ export function AdminDashboard({
           >
             <Server className="w-4 h-4 text-emerald-400" />
             Espace Services & Télécom
+          </button>
+
+          <button
+            id="tab-database-btn"
+            onClick={() => setActiveTab('database')}
+            className={`px-4 py-2.5 rounded-t-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition border-b-2 whitespace-nowrap ${
+              activeTab === 'database'
+                ? 'border-emerald-500 text-white bg-zinc-800/60'
+                : 'border-transparent text-zinc-400 hover:text-zinc-200'
+            }`}
+          >
+            <Database className="w-4 h-4 text-emerald-400" />
+            Base Firebase & Synchronisation
           </button>
 
           <button
@@ -585,6 +600,13 @@ export function AdminDashboard({
                 </div>
               </div>
             </div>
+          )}
+
+          {/* ========================================================= */}
+          {/* TAB: DATABASE FIRESTORE & REPAIR */}
+          {/* ========================================================= */}
+          {activeTab === 'database' && (
+            <AdminFirebaseManager />
           )}
 
           {/* ========================================================= */}

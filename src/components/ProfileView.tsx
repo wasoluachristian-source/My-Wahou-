@@ -10,17 +10,18 @@ import {
   Check,
   Hash,
   LogOut,
-  Sparkles,
-  ShieldCheck,
   Building2,
   ChevronRight,
-  ArrowRight
+  ArrowRight,
+  Trash2,
+  Camera
 } from 'lucide-react';
 import { UserProfile, AppSettings } from '../types';
 import { updateUserInDb } from '../services/dbService';
 import { compressAvatarImage } from '../utils/mediaUtils';
 import { AbonnementsView } from './AbonnementsView';
 import { EntrepriseView } from './EntrepriseView';
+import { UserAvatar } from './UserAvatar';
 
 export type ProfileSubTab = 'profil' | 'abonnements' | 'entreprise';
 
@@ -46,7 +47,7 @@ export function ProfileView({
   const [currentTab, setCurrentTab] = useState<ProfileSubTab>(activeTab);
   const [displayName, setDisplayName] = useState(currentUser.displayName);
   const [bio, setBio] = useState(currentUser.bio || '');
-  const [avatarUrl, setAvatarUrl] = useState(currentUser.avatarUrl);
+  const [avatarUrl, setAvatarUrl] = useState(currentUser.avatarUrl || '');
   const [statusText, setStatusText] = useState(currentUser.statusText || '');
   const [isSaving, setIsSaving] = useState(false);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
@@ -67,14 +68,6 @@ export function ProfileView({
     }
   };
 
-  const defaultAvatars = [
-    'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-    'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
-    'https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=150&auto=format&fit=crop&q=80',
-    'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80',
-    'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=150&auto=format&fit=crop&q=80',
-  ];
-
   const handleFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -89,6 +82,10 @@ export function ProfileView({
     } finally {
       setIsUploadingPhoto(false);
     }
+  };
+
+  const handleRemovePhoto = () => {
+    setAvatarUrl('');
   };
 
   const handleCopyTag = () => {
@@ -204,24 +201,21 @@ export function ProfileView({
               {/* Profile Card & Avatar Selection */}
               <div className="p-6 sm:p-8 rounded-3xl bg-zinc-900/60 border border-zinc-800 space-y-6">
                 <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6">
-                  {/* Avatar with upload overlay */}
+                  {/* Avatar preview */}
                   <div className="relative group shrink-0">
-                    <img
-                      src={avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200'}
-                      alt={currentUser.displayName}
-                      className="w-28 h-28 rounded-3xl object-cover border-2 border-violet-500 shadow-2xl shadow-violet-500/30"
+                    <UserAvatar
+                      name={displayName}
+                      avatarUrl={avatarUrl}
+                      size="2xl"
+                      isVIP={currentUser.isVIP}
                     />
-                    {currentUser.isVIP && (
-                      <span className="absolute -bottom-2 -right-2 p-1.5 rounded-full bg-amber-500 text-zinc-950 shadow-lg">
-                        <Crown className="w-4 h-4" />
-                      </span>
-                    )}
+
                     <button
                       onClick={() => fileInputRef.current?.click()}
                       className="absolute inset-0 bg-black/60 rounded-3xl flex flex-col items-center justify-center text-white opacity-0 group-hover:opacity-100 transition duration-200 cursor-pointer"
                       title="Changer ma photo"
                     >
-                      <Upload className="w-6 h-6 mb-1 text-violet-300" />
+                      <Camera className="w-6 h-6 mb-1 text-violet-300" />
                       <span className="text-[11px] font-bold">Changer</span>
                     </button>
                   </div>
@@ -245,8 +239,26 @@ export function ProfileView({
                         className="px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-bold text-xs flex items-center gap-2 transition shadow-md shadow-violet-600/30 active:scale-95"
                       >
                         <Upload className="w-4 h-4" />
-                        <span>{isUploadingPhoto ? 'Traitement...' : 'Choisir dans la galerie / ordinateur'}</span>
+                        <span>
+                          {isUploadingPhoto
+                            ? 'Traitement...'
+                            : avatarUrl
+                            ? 'Changer ma photo'
+                            : 'Importer ma photo'}
+                        </span>
                       </button>
+
+                      {avatarUrl && (
+                        <button
+                          type="button"
+                          onClick={handleRemovePhoto}
+                          className="px-3 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-red-400 font-bold text-xs flex items-center gap-1.5 transition"
+                          title="Supprimer la photo et utiliser l'avatar dégradé"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span>Supprimer photo</span>
+                        </button>
+                      )}
                     </div>
 
                     {/* Unique Profile Tag */}
@@ -260,31 +272,13 @@ export function ProfileView({
                         className="p-1 rounded text-violet-400 hover:text-white transition"
                         title="Copier mon identifiant"
                       >
-                        {copiedTag ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                        {copiedTag ? (
+                          <Check className="w-3.5 h-3.5 text-emerald-400" />
+                        ) : (
+                          <Copy className="w-3.5 h-3.5" />
+                        )}
                       </button>
                     </div>
-                  </div>
-                </div>
-
-                {/* Preset Avatars */}
-                <div>
-                  <label className="block text-xs font-semibold text-zinc-400 mb-2 uppercase">
-                    Ou choisir parmi les avatars par défaut :
-                  </label>
-                  <div className="flex items-center gap-3">
-                    {defaultAvatars.map((url, i) => (
-                      <img
-                        key={i}
-                        src={url}
-                        alt="Avatar"
-                        onClick={() => setAvatarUrl(url)}
-                        className={`w-11 h-11 rounded-2xl object-cover cursor-pointer border-2 transition ${
-                          avatarUrl === url
-                            ? 'border-violet-500 scale-105 shadow-md shadow-violet-500/30'
-                            : 'border-zinc-800 opacity-60 hover:opacity-100'
-                        }`}
-                      />
-                    ))}
                   </div>
                 </div>
 
@@ -304,7 +298,7 @@ export function ProfileView({
 
                   <div>
                     <label className="block text-xs font-semibold text-zinc-400 mb-1.5 uppercase">
-                      Statut d'humeur
+                      Statut personnel
                     </label>
                     <input
                       type="text"
@@ -316,13 +310,29 @@ export function ProfileView({
                   </div>
                 </div>
 
+                {/* Bio */}
+                <div>
+                  <label className="block text-xs font-semibold text-zinc-400 mb-1.5 uppercase">
+                    Biographie
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={bio}
+                    onChange={(e) => setBio(e.target.value)}
+                    placeholder="Présentez-vous en quelques mots..."
+                    className="w-full px-4 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-white text-sm focus:border-violet-500 focus:outline-none resize-none"
+                  />
+                </div>
+
                 {/* Save Button */}
                 <div className="flex items-center justify-between pt-4 border-t border-zinc-800">
                   {savedSuccess ? (
                     <span className="text-xs font-bold text-emerald-400 flex items-center gap-1.5">
                       <Check className="w-4 h-4" /> Profil mis à jour avec succès !
                     </span>
-                  ) : <div />}
+                  ) : (
+                    <div />
+                  )}
 
                   <button
                     id="save-profile-space-btn"
@@ -347,7 +357,9 @@ export function ProfileView({
                       <p className="text-xs text-zinc-400">
                         {currentUser.isVIP
                           ? '👑 Vous bénéficiez du statut VIP Illimité'
-                          : `${currentUser.mediaQuota || 0} crédits médias • ${currentUser.callMinutes || 0} minutes d'appels`}
+                          : `${currentUser.mediaQuota || 0} crédits médias • ${
+                              currentUser.callMinutes || 0
+                            } minutes d'appels`}
                       </p>
                     </div>
                   </div>

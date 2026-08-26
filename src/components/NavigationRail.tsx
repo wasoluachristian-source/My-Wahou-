@@ -2,17 +2,16 @@ import { ReactNode } from 'react';
 import {
   MessageSquare,
   Radio,
-  Zap,
   User,
   Smartphone,
   Shield,
   Share2,
   Crown,
-  Users,
-  Building2
+  Users
 } from 'lucide-react';
 import { UserProfile, AppSettings } from '../types';
 import { isUserAdmin } from '../services/dbService';
+import { UserAvatar } from './UserAvatar';
 
 export type AppSpace = 'discussion' | 'lisanga' | 'live' | 'profil' | 'mobile_app';
 
@@ -33,14 +32,16 @@ export function NavigationRail({
   appSettings,
   onOpenAdmin,
   onOpenWebLink,
+  unreadCount = 0,
 }: NavigationRailProps) {
   const isAdmin = isUserAdmin(currentUser);
 
-  const navItems: { id: AppSpace; label: string; icon: ReactNode; badge?: string }[] = [
+  const navItems: { id: AppSpace; label: string; icon: ReactNode; badge?: string; count?: number }[] = [
     {
       id: 'discussion',
       label: 'Discussions',
       icon: <MessageSquare className="w-5 h-5" />,
+      count: unreadCount,
     },
     {
       id: 'lisanga',
@@ -96,6 +97,8 @@ export function NavigationRail({
           <div className="flex flex-col items-center gap-2 mt-4">
             {navItems.map((item) => {
               const isActive = currentSpace === item.id;
+              const hasUnread = Boolean(item.count && item.count > 0);
+
               return (
                 <button
                   key={item.id}
@@ -108,12 +111,21 @@ export function NavigationRail({
                   }`}
                   title={item.label}
                 >
-                  {item.icon}
-                  <span className="text-[9px] font-bold tracking-tight text-center leading-none">
+                  <div className="relative">
+                    {item.icon}
+                    {/* Visual Red Unread Notification Badge (Pastille rouge) */}
+                    {hasUnread && (
+                      <span className="absolute -top-2 -right-2.5 min-w-[18px] h-[18px] px-1 rounded-full bg-red-600 text-white text-[9px] font-black flex items-center justify-center shadow-lg shadow-red-600/50 ring-2 ring-zinc-950 animate-bounce">
+                        {item.count! > 99 ? '99+' : item.count}
+                      </span>
+                    )}
+                  </div>
+
+                  <span className="text-[9px] font-bold tracking-tight text-center leading-none mt-0.5">
                     {item.label}
                   </span>
 
-                  {item.badge && (
+                  {item.badge && !hasUnread && (
                     <span className="absolute -top-1 -right-1 px-1 py-0.2 rounded-full bg-pink-600 text-white text-[8px] font-black uppercase shadow">
                       {item.badge}
                     </span>
@@ -151,16 +163,15 @@ export function NavigationRail({
             className="relative cursor-pointer hover:opacity-90 transition group"
             title="Mon Profil"
           >
-            <img
-              src={currentUser.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100'}
-              alt={currentUser.displayName}
-              className="w-10 h-10 rounded-full object-cover border-2 border-violet-500/80 group-hover:border-pink-500 transition"
+            <UserAvatar
+              name={currentUser.displayName}
+              avatarUrl={currentUser.avatarUrl}
+              size="md"
+              isVIP={currentUser.isVIP}
+              isOnline={currentUser.isOnline}
+              showOnlineStatus={true}
+              className="border-2 border-violet-500/80 group-hover:border-pink-500"
             />
-            {currentUser.isVIP && (
-              <span className="absolute -bottom-1 -right-1 p-0.5 rounded-full bg-amber-500 text-zinc-950">
-                <Crown className="w-2.5 h-2.5" />
-              </span>
-            )}
           </div>
         </div>
       </nav>
@@ -172,6 +183,8 @@ export function NavigationRail({
       >
         {navItems.map((item) => {
           const isActive = currentSpace === item.id;
+          const hasUnread = Boolean(item.count && item.count > 0);
+
           return (
             <button
               key={item.id}
@@ -185,10 +198,17 @@ export function NavigationRail({
             >
               <div className="relative flex items-center justify-center">
                 {item.icon}
-                {item.badge && (
-                  <span className="absolute -top-1.5 -right-3 px-1.5 py-0.2 rounded-full bg-gradient-to-r from-pink-600 to-violet-600 text-white text-[8px] font-black uppercase shadow-sm">
-                    {item.badge}
+                {/* Visual Red Unread Notification Badge Mobile (Pastille rouge) */}
+                {hasUnread ? (
+                  <span className="absolute -top-2 -right-3 min-w-[18px] h-[18px] px-1 rounded-full bg-red-600 text-white text-[9px] font-black flex items-center justify-center shadow-lg shadow-red-600/50 ring-2 ring-zinc-950 animate-pulse">
+                    {item.count! > 99 ? '99+' : item.count}
                   </span>
+                ) : (
+                  item.badge && (
+                    <span className="absolute -top-1.5 -right-3 px-1.5 py-0.2 rounded-full bg-gradient-to-r from-pink-600 to-violet-600 text-white text-[8px] font-black uppercase shadow-sm">
+                      {item.badge}
+                    </span>
+                  )
                 )}
               </div>
               <span className="text-[10px] font-bold leading-tight tracking-tight whitespace-nowrap">

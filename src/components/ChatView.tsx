@@ -2,28 +2,37 @@ import { useState, useRef, useEffect, FormEvent, ChangeEvent } from 'react';
 import {
   Send,
   Mic,
-  Square,
   Trash2,
   Image as ImageIcon,
   Phone,
   Video,
   MessageSquare,
   Smile,
+  Check,
   CheckCheck,
   Crown,
-  Lock,
-  Zap,
-  Info,
   Maximize2,
   X,
   Reply,
-  CornerDownRight
+  CornerDownRight,
+  MoreHorizontal,
+  Heart
 } from 'lucide-react';
 import { UserProfile, ChatMessage, AppSettings, ChatMessageReply } from '../types';
 import { AudioPlayer } from './AudioPlayer';
+import { UserAvatar } from './UserAvatar';
 import { useAudioRecorder } from '../hooks/useAudioRecorder';
-import { sendMessageToDb, reactToMessageInDb, updateUserInDb, getContactDisplayName } from '../services/dbService';
+import {
+  sendMessageToDb,
+  reactToMessageInDb,
+  deleteMessageFromDb,
+  markMessagesAsReadInDb,
+  setTypingStatusInDb,
+  updateUserInDb,
+  getContactDisplayName
+} from '../services/dbService';
 import { compressImageFile } from '../utils/mediaUtils';
+import { playMessageSentSound, playMessageClickSound } from '../utils/soundUtils';
 
 interface ChatViewProps {
   conversationId: string;
@@ -46,12 +55,16 @@ export function ChatView({
 }: ChatViewProps) {
   const [inputText, setInputText] = useState('');
   const [showEmojiPicker, setShowEmojiPicker] = useState<string | null>(null);
+  const [selectedMessageAction, setSelectedMessageAction] = useState<ChatMessage | null>(null);
   const [lightboxMedia, setLightboxMedia] = useState<{ url: string; type: 'image' | 'video' } | null>(null);
   const [isUploadingMedia, setIsUploadingMedia] = useState(false);
   const [replyingToMessage, setReplyingToMessage] = useState<ChatMessage | null>(null);
+  const [isTargetTyping, setIsTargetTyping] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const lastTapRef = useRef<{ id: string; time: number }>({ id: '', time: 0 });
 
   const {
     recordingState,
@@ -60,10 +73,17 @@ export function ChatView({
     cancelRecording,
   } = useAudioRecorder();
 
+  // Mark incoming messages as read when viewing conversation
+  useEffect(() => {
+    if (conversationId && currentUser?.id) {
+      markMessagesAsReadInDb(conversationId, currentUser.id);
+    }
+  }, [conversationId, currentUser?.id, messages.length]);
+
   // Scroll to bottom on new messages
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages.length, recordingState.isRecording]);
+  }, [messages.length, recordingState.isRecording, isTargetTyping]);
 
   const getReplyPayload = (targetMsg: ChatMessage | null): ChatMessageReply | undefined => {
     if (!targetMsg) return undefined;
@@ -78,14 +98,36 @@ export function ChatView({
       senderTag: targetMsg.senderId === currentUser.id ? currentUser.profileTag : undefined,
       content: contentPreview || 'Message',
       type: targetMsg.type,
-      mediaUrl: targetMsg.mediaUrl
+      mediaUrl: targetMsg.mediaUrl,
     };
+  };
+
+  // Handle typing status notification
+  const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setInputText(val);
+
+    if (conversationId && currentUser?.id) {
+      setTypingStatusInDb(conversationId, currentUser.id, true);
+
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+      typingTimeoutRef.current = setTimeout(() => {
+        setTypingStatusInDb(conversationId, currentUser.id, false);
+      }, 2500);
+    }
   };
 
   // Send standard free text message
   const handleSendText = async (e?: FormEvent) => {
     if (e) e.preventDefault();
     if (!inputText.trim()) return;
+
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+    setTypingStatusInDb(conversationId, currentUser.id, false);
 
     const replyPayload = getReplyPayload(replyingToMessage);
 
@@ -95,6 +137,7 @@ export function ChatView({
       senderId: currentUser.id,
       senderName: currentUser.displayName,
       senderAvatar: currentUser.avatarUrl,
+      senderTag: currentUser.profileTag,
       type: 'text',
       content: inputText.trim(),
       replyTo: replyPayload,
@@ -105,7 +148,8 @@ export function ChatView({
 
     setInputText('');
     setReplyingToMessage(null);
-    await sendMessageToDb(newMsg);
+    playMessageSentSound();
+    await sendMessageToDb(newMsg, targetUser?.id);
   };
 
   // Send free voice memo
@@ -125,6 +169,7 @@ export function ChatView({
           senderId: currentUser.id,
           senderName: currentUser.displayName,
           senderAvatar: currentUser.avatarUrl,
+          senderTag: currentUser.profileTag,
           type: 'voice',
           content: 'Note vocale',
           audioUrl: base64Audio,
@@ -136,7 +181,8 @@ export function ChatView({
         };
 
         setReplyingToMessage(null);
-        await sendMessageToDb(newMsg);
+        playMessageSentSound();
+        await sendMessageToDb(newMsg, targetUser?.id);
       };
       reader.readAsDataURL(blob);
     } catch (err) {
@@ -192,6 +238,7 @@ export function ChatView({
         senderId: currentUser.id,
         senderName: currentUser.displayName,
         senderAvatar: currentUser.avatarUrl,
+        senderTag: currentUser.profileTag,
         type: isVideo ? 'video' : 'image',
         content: isVideo ? '🎬 Vidéo envoyée' : '🖼️ Photo envoyée',
         mediaUrl: base64Data,
@@ -203,7 +250,7 @@ export function ChatView({
       };
 
       setReplyingToMessage(null);
-      await sendMessageToDb(newMsg);
+      await sendMessageToDb(newMsg, targetUser?.id);
 
       // Deduct 1 media token if not VIP
       if (!currentUser.isVIP) {
@@ -218,10 +265,32 @@ export function ChatView({
     }
   };
 
-  // Handle Reaction
+  // Handle Double-Click / Double-Tap on a message
+  const handleMessageTouchOrClick = (msg: ChatMessage) => {
+    const now = Date.now();
+    const last = lastTapRef.current;
+    if (last.id === msg.id && now - last.time < 350) {
+      // Double tap detected!
+      setSelectedMessageAction(msg);
+      lastTapRef.current = { id: '', time: 0 };
+    } else {
+      lastTapRef.current = { id: msg.id, time: now };
+    }
+  };
+
+  // Handle Reactions
   const handleReact = async (messageId: string, emoji: string) => {
     await reactToMessageInDb(messageId, { userId: currentUser.id, emoji });
     setShowEmojiPicker(null);
+    setSelectedMessageAction(null);
+  };
+
+  // Handle Message Deletion
+  const handleDeleteMessage = async (msg: ChatMessage) => {
+    if (confirm('Voulez-vous supprimer ce message ?')) {
+      await deleteMessageFromDb(msg.id);
+      setSelectedMessageAction(null);
+    }
   };
 
   const scrollToMessage = (msgId: string) => {
@@ -235,7 +304,7 @@ export function ChatView({
     }
   };
 
-  const reactionEmojis = ['🔥', '❤️', '😮', '😂', '👏', '👑'];
+  const reactionEmojis = ['❤️', '🔥', '👍', '😂', '😮', '😢', '🙏'];
 
   return (
     <div
@@ -252,19 +321,14 @@ export function ChatView({
         className="p-3.5 sm:p-4 border-b border-zinc-800/80 bg-zinc-950/85 backdrop-blur-md flex items-center justify-between z-20 shrink-0"
       >
         <div className="flex items-center gap-3">
-          <div className="relative">
-            <img
-              src={
-                targetUser?.avatarUrl ||
-                'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100'
-              }
-              alt={getContactDisplayName(targetUser)}
-              className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl object-cover border border-zinc-800"
-            />
-            {targetUser?.isOnline && (
-              <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-emerald-500 border-2 border-zinc-950" />
-            )}
-          </div>
+          <UserAvatar
+            name={getContactDisplayName(targetUser)}
+            avatarUrl={targetUser?.avatarUrl}
+            size="md"
+            isOnline={targetUser?.isOnline}
+            showOnlineStatus={true}
+            isVIP={targetUser?.isVIP}
+          />
 
           <div>
             <div className="flex items-center gap-2">
@@ -282,10 +346,17 @@ export function ChatView({
                 </span>
               )}
             </div>
-            <p className="text-xs text-zinc-400">
-              {targetUser?.isOnline
-                ? '🟢 En ligne sur my Wahou'
-                : targetUser?.statusText || 'Messagerie gratuite et instantanée'}
+            <p className="text-xs flex items-center gap-1.5">
+              {targetUser?.isOnline ? (
+                <span className="text-emerald-400 font-semibold flex items-center gap-1">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                  En ligne
+                </span>
+              ) : (
+                <span className="text-zinc-400">
+                  {targetUser?.statusText || 'Messagerie gratuite et instantanée'}
+                </span>
+              )}
             </p>
           </div>
         </div>
@@ -297,7 +368,7 @@ export function ChatView({
             id="start-audio-call-btn"
             onClick={() => onStartCall(false)}
             className="p-2.5 rounded-xl bg-zinc-900 hover:bg-violet-950/50 text-violet-300 hover:text-white border border-zinc-800 hover:border-violet-500/50 transition active:scale-95 flex items-center gap-1.5 text-xs font-semibold"
-            title="Appel vocal HD (avec Forfait)"
+            title="Appel vocal HD"
           >
             <Phone className="w-4 h-4" />
             <span className="hidden sm:inline">Appel</span>
@@ -308,7 +379,7 @@ export function ChatView({
             id="start-video-call-btn"
             onClick={() => onStartCall(true)}
             className="p-2.5 rounded-xl bg-zinc-900 hover:bg-pink-950/50 text-pink-300 hover:text-white border border-zinc-800 hover:border-pink-500/50 transition active:scale-95 flex items-center gap-1.5 text-xs font-semibold"
-            title="Appel vidéo HD (avec Forfait)"
+            title="Appel vidéo HD"
           >
             <Video className="w-4 h-4" />
             <span className="hidden sm:inline">Vidéo</span>
@@ -338,13 +409,13 @@ export function ChatView({
               <MessageSquare className="w-7 h-7" />
             </div>
             <h4 className="font-bold text-white text-base mb-1">
-              Bienvenue dans my Wahou !
+              Discussion instantanée my Wahou
             </h4>
             <p className="text-xs text-zinc-400 mb-3">
-              Envoyez des messages écrits et enregistrez des notes vocales <strong>100% gratuitement</strong> et sans aucun forfait.
+              Envoyez des messages écrits et enregistrez des notes vocales <strong>100% gratuitement</strong> sans aucun forfait.
             </p>
-            <div className="text-[11px] text-zinc-500 bg-zinc-950/60 p-2.5 rounded-xl border border-zinc-800">
-              📸 Les photos, vidéos et appels HD s'activent avec les Forfaits my Wahou.
+            <div className="text-[11px] text-zinc-400 bg-zinc-950/60 p-2.5 rounded-xl border border-zinc-800">
+              💡 <em>Astuce :</em> Double-cliquez sur un message pour <strong>Répondre</strong>, <strong>Supprimer</strong> ou ajouter des <strong>Emojis</strong>.
             </div>
           </div>
         )}
@@ -372,14 +443,19 @@ export function ChatView({
             <div
               key={msg.id}
               id={`msg-${msg.id}`}
-              className={`flex items-end gap-2.5 group transition-all duration-300 rounded-2xl p-1 ${isSelf ? 'justify-end' : 'justify-start'}`}
+              onDoubleClick={() => setSelectedMessageAction(msg)}
+              onClick={() => handleMessageTouchOrClick(msg)}
+              className={`flex items-end gap-2.5 group transition-all duration-300 rounded-2xl p-1 relative cursor-pointer ${
+                isSelf ? 'justify-end' : 'justify-start'
+              }`}
             >
-              {/* Avatar for target */}
+              {/* Avatar for other user */}
               {!isSelf && (
-                <img
-                  src={msg.senderAvatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100'}
-                  alt={msg.senderName}
-                  className="w-7 h-7 rounded-full object-cover mb-1 border border-zinc-800 shrink-0"
+                <UserAvatar
+                  name={msg.senderName}
+                  avatarUrl={msg.senderAvatar}
+                  size="sm"
+                  className="mb-1"
                 />
               )}
 
@@ -392,17 +468,23 @@ export function ChatView({
                       : 'bg-zinc-900/90 text-zinc-100 rounded-bl-sm border border-zinc-800/80 backdrop-blur-md'
                   }`}
                 >
-                  {/* Sender Name if not self */}
+                  {/* Sender Name if in group/lisanga or not self */}
                   {!isSelf && (
-                    <div className="text-[11px] font-bold text-violet-400 mb-1">
-                      {msg.senderName}
+                    <div className="text-[11px] font-bold text-violet-400 mb-1 flex items-center justify-between gap-2">
+                      <span>{msg.senderName}</span>
+                      {msg.senderTag && (
+                        <span className="text-[9px] font-mono text-zinc-400">{msg.senderTag}</span>
+                      )}
                     </div>
                   )}
 
-                  {/* Quoted Reply if message was a reply to another message */}
+                  {/* Quoted Reply if message was a reply */}
                   {msg.replyTo && (
                     <div
-                      onClick={() => scrollToMessage(msg.replyTo!.id)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        scrollToMessage(msg.replyTo!.id);
+                      }}
                       className={`mb-2 p-2 rounded-xl border-l-4 text-xs cursor-pointer select-none transition ${
                         isSelf
                           ? 'border-violet-300 bg-violet-950/70 hover:bg-violet-950 text-violet-100'
@@ -437,7 +519,10 @@ export function ChatView({
                       <img
                         src={msg.mediaUrl}
                         alt="Photo envoyée"
-                        onClick={() => setLightboxMedia({ url: msg.mediaUrl!, type: 'image' })}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setLightboxMedia({ url: msg.mediaUrl!, type: 'image' });
+                        }}
                         className="w-full object-cover rounded-2xl hover:scale-102 transition duration-200"
                       />
                       <div className="absolute inset-0 bg-black/30 opacity-0 group-hover/img:opacity-100 transition flex items-center justify-center text-white">
@@ -464,13 +549,37 @@ export function ChatView({
                     </p>
                   )}
 
-                  {/* Footer (Time & Checkmarks) */}
-                  <div className="flex items-center justify-end gap-1.5 mt-1 pt-0.5 text-[10px] opacity-75">
-                    <span>
+                  {/* Footer (Timestamp + Status "Vu" / Checkmarks + Mini Avatar Bubble) */}
+                  <div className="flex items-center justify-end gap-1.5 mt-1 pt-0.5 text-[10px] select-none">
+                    <span className="opacity-70">
                       {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </span>
+
+                    {/* Read Status for sender messages */}
                     {isSelf && (
-                      <CheckCheck className={`w-3.5 h-3.5 ${msg.isRead ? 'text-cyan-400' : 'text-zinc-300'}`} />
+                      <div className="flex items-center gap-1">
+                        {msg.isRead ? (
+                          <span className="flex items-center gap-1 text-cyan-300 font-bold bg-cyan-950/50 px-1.5 py-0.5 rounded-full border border-cyan-500/30 text-[9px]">
+                            <span>Vu</span>
+                            <CheckCheck className="w-3 h-3 text-cyan-300" />
+                            {/* Petite photo / boule miniature de l'utilisateur qui a vu */}
+                            <UserAvatar
+                              name={getContactDisplayName(targetUser)}
+                              avatarUrl={targetUser?.avatarUrl}
+                              size="xs"
+                              className="w-3.5 h-3.5 ring-1 ring-cyan-400/60 ml-0.5"
+                            />
+                          </span>
+                        ) : (
+                          <span className="flex items-center gap-0.5 opacity-60 text-zinc-300">
+                            {msg.isDelivered ? (
+                              <CheckCheck className="w-3.5 h-3.5 text-zinc-300" title="Distribué (Non lu)" />
+                            ) : (
+                              <Check className="w-3.5 h-3.5 text-zinc-400" title="Envoyé" />
+                            )}
+                          </span>
+                        )}
+                      </div>
                     )}
                   </div>
                 </div>
@@ -481,7 +590,7 @@ export function ChatView({
                     {msg.reactions.map((r, i) => (
                       <span
                         key={i}
-                        className="px-1.5 py-0.5 rounded-full bg-zinc-900 border border-zinc-700 text-xs shadow-sm animate-fade-in"
+                        className="px-1.5 py-0.5 rounded-full bg-zinc-900 border border-zinc-700 text-xs shadow-sm"
                       >
                         {r.emoji}
                       </span>
@@ -489,43 +598,23 @@ export function ChatView({
                   </div>
                 )}
 
-                {/* Quick Action Buttons (Reply & React) */}
+                {/* Quick Action Button on Hover */}
                 <div
                   className={`absolute top-0 ${
-                    isSelf ? '-left-16' : '-right-16'
+                    isSelf ? '-left-12' : '-right-12'
                   } opacity-0 group-hover:opacity-100 transition flex items-center gap-1 z-10`}
                 >
                   <button
-                    onClick={() => setReplyingToMessage(msg)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedMessageAction(msg);
+                    }}
                     className="p-1.5 rounded-full bg-zinc-900/90 hover:bg-violet-900 border border-zinc-800 text-zinc-400 hover:text-white transition shadow-sm"
-                    title="Répondre à ce message"
+                    title="Options (Répondre, Supprimer, Emojis)"
                   >
-                    <Reply className="w-3.5 h-3.5" />
-                  </button>
-
-                  <button
-                    onClick={() => setShowEmojiPicker(showEmojiPicker === msg.id ? null : msg.id)}
-                    className="p-1.5 rounded-full bg-zinc-900/90 hover:bg-zinc-800 border border-zinc-800 text-zinc-400 hover:text-white transition shadow-sm"
-                    title="Réagir"
-                  >
-                    <Smile className="w-3.5 h-3.5" />
+                    <MoreHorizontal className="w-3.5 h-3.5" />
                   </button>
                 </div>
-
-                {/* Floating Emoji Picker Popover */}
-                {showEmojiPicker === msg.id && (
-                  <div className="absolute top-8 z-30 flex items-center gap-1 p-1.5 rounded-2xl bg-zinc-900 border border-zinc-700 shadow-xl animate-fade-in">
-                    {reactionEmojis.map((emoji) => (
-                      <button
-                        key={emoji}
-                        onClick={() => handleReact(msg.id, emoji)}
-                        className="w-7 h-7 rounded-xl hover:bg-zinc-800 text-base transition flex items-center justify-center"
-                      >
-                        {emoji}
-                      </button>
-                    ))}
-                  </div>
-                )}
               </div>
             </div>
           );
@@ -550,7 +639,7 @@ export function ChatView({
       >
         {/* Replying Banner */}
         {replyingToMessage && (
-          <div className="mb-2 p-2 px-3 rounded-2xl bg-violet-950/70 border border-violet-500/40 flex items-center justify-between gap-2 animate-fade-in shadow-md">
+          <div className="mb-2 p-2 px-3 rounded-2xl bg-violet-950/70 border border-violet-500/40 flex items-center justify-between gap-2 shadow-md">
             <div className="flex items-center gap-2 overflow-hidden">
               <div className="p-1 rounded-lg bg-violet-600/30 text-violet-300 shrink-0">
                 <Reply className="w-3.5 h-3.5" />
@@ -589,7 +678,7 @@ export function ChatView({
               </div>
               <div>
                 <div className="text-xs font-bold text-white flex items-center gap-2">
-                  <span>Enregistrement vocal gratuit...</span>
+                  <span>Enregistrement vocal gratuit (iPhone & Android)...</span>
                   <span className="font-mono text-pink-400">
                     {Math.floor(recordingState.duration / 60)}:
                     {(recordingState.duration % 60).toFixed(0).padStart(2, '0')}
@@ -624,7 +713,7 @@ export function ChatView({
         ) : (
           /* Normal Text / Media / Mic Input Bar */
           <form onSubmit={handleSendText} className="flex items-center gap-2">
-            {/* Media Upload Button (Requires Media Forfait) */}
+            {/* Media Upload Button */}
             <button
               type="button"
               id="upload-media-btn"
@@ -647,7 +736,7 @@ export function ChatView({
                 id="message-text-input"
                 type="text"
                 value={inputText}
-                onChange={(e) => setInputText(e.target.value)}
+                onChange={handleInputChange}
                 placeholder="Écrivez un message gratuit..."
                 className="w-full px-4 py-3 rounded-2xl bg-zinc-900/90 border border-zinc-800 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-violet-500 transition"
               />
@@ -669,7 +758,7 @@ export function ChatView({
                 type="button"
                 onClick={startRecording}
                 className="p-3 rounded-2xl bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-lg shadow-violet-600/30 hover:scale-105 transition active:scale-95 shrink-0"
-                title="Enregistrer un message vocal (100% Gratuit)"
+                title="Enregistrer un message vocal (iPhone / Android / Web)"
               >
                 <Mic className="w-5 h-5" />
               </button>
@@ -677,6 +766,76 @@ export function ChatView({
           </form>
         )}
       </footer>
+
+      {/* DOUBLE CLICK / TAP MESSAGE ACTION MODAL */}
+      {selectedMessageAction && (
+        <div
+          id="message-action-dialog"
+          onClick={() => setSelectedMessageAction(null)}
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-sm bg-zinc-900 border border-zinc-800 rounded-3xl p-5 shadow-2xl space-y-4"
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between pb-2 border-b border-zinc-800">
+              <div className="text-xs font-bold text-zinc-400">
+                Options du message ({selectedMessageAction.senderId === currentUser.id ? 'Vous' : selectedMessageAction.senderName})
+              </div>
+              <button
+                onClick={() => setSelectedMessageAction(null)}
+                className="p-1 rounded-lg hover:bg-zinc-800 text-zinc-400"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Emojis row */}
+            <div>
+              <label className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider mb-2 block">
+                Ajouter une réaction
+              </label>
+              <div className="flex items-center justify-between gap-1 p-2 bg-zinc-950 rounded-2xl border border-zinc-800">
+                {reactionEmojis.map((emoji) => (
+                  <button
+                    key={emoji}
+                    onClick={() => handleReact(selectedMessageAction.id, emoji)}
+                    className="w-9 h-9 rounded-xl hover:bg-zinc-800 text-xl transition flex items-center justify-center active:scale-125"
+                  >
+                    {emoji}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Action buttons */}
+            <div className="space-y-2 pt-1">
+              <button
+                onClick={() => {
+                  setReplyingToMessage(selectedMessageAction);
+                  setSelectedMessageAction(null);
+                  document.getElementById('message-text-input')?.focus();
+                }}
+                className="w-full py-3 px-4 rounded-2xl bg-gradient-to-r from-violet-600 to-pink-600 hover:from-violet-500 hover:to-pink-500 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-violet-600/20 transition"
+              >
+                <Reply className="w-4 h-4" />
+                <span>Répondre à ce message</span>
+              </button>
+
+              {(selectedMessageAction.senderId === currentUser.id || currentUser.role === 'admin') && (
+                <button
+                  onClick={() => handleDeleteMessage(selectedMessageAction)}
+                  className="w-full py-3 px-4 rounded-2xl bg-red-600/20 hover:bg-red-600/30 text-red-400 border border-red-500/30 font-bold text-xs flex items-center justify-center gap-2 transition"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  <span>Supprimer ce message</span>
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Lightbox for Image/Video preview */}
       {lightboxMedia && (

@@ -40,7 +40,8 @@ export interface ChatMessage {
   conversationId: string;
   senderId: string;
   senderName: string;
-  senderAvatar: string;
+  senderAvatar?: string;
+  senderTag?: string;
   type: MessageType;
   content: string; // text content or caption
   audioUrl?: string; // base64 or blob URL for voice note
@@ -51,7 +52,10 @@ export interface ChatMessage {
   timestamp: number;
   isDelivered: boolean;
   isRead: boolean;
+  readBy?: string[];
+  readAt?: number;
   reactions?: MessageReaction[];
+  offlineSyncStatus?: 'synced' | 'pending' | 'offline';
   callInfo?: {
     type: 'audio' | 'video';
     duration: number; // in seconds
@@ -68,9 +72,12 @@ export interface Conversation {
   lastMessage?: {
     text: string;
     senderName: string;
+    senderId?: string;
     timestamp: number;
     type: MessageType;
+    isRead?: boolean;
   };
+  typingUsers?: Record<string, number>; // userId -> timestamp
   unreadCount?: Record<string, number>;
   createdAt: number;
   updatedAt: number;
@@ -104,6 +111,23 @@ export interface AppSettings {
   freeTextUnlimited: boolean;
   freeVoiceUnlimited: boolean;
   updatedAt: number;
+  syncTimestamp?: number; // Real-time pulse to force sync across all user clients
+}
+
+export interface FirebaseCollectionSummary {
+  name: string;
+  count: number;
+  description: string;
+  icon: string;
+  sampleDocs: Array<{ id: string; [key: string]: any }>;
+}
+
+export interface FirebaseDatabaseStats {
+  connected: boolean;
+  lastChecked: number;
+  totalCollections: number;
+  totalDocuments: number;
+  collections: FirebaseCollectionSummary[];
 }
 
 export interface CallSession {

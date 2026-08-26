@@ -1,8 +1,9 @@
 import { useState, useRef, ChangeEvent } from 'react';
-import { User, Mail, Zap, Crown, Image as ImageIcon, PhoneCall, LogOut, Check, X, Upload, Copy, Hash, Sparkles } from 'lucide-react';
+import { User, Crown, Image as ImageIcon, PhoneCall, LogOut, Check, X, Upload, Copy, Hash, Trash2, Camera, Zap } from 'lucide-react';
 import { UserProfile } from '../types';
 import { updateUserInDb } from '../services/dbService';
 import { compressAvatarImage } from '../utils/mediaUtils';
+import { UserAvatar } from './UserAvatar';
 
 interface UserProfileModalProps {
   isOpen: boolean;
@@ -21,7 +22,7 @@ export function UserProfileModal({
 }: UserProfileModalProps) {
   const [displayName, setDisplayName] = useState(currentUser.displayName);
   const [bio, setBio] = useState(currentUser.bio || '');
-  const [avatarUrl, setAvatarUrl] = useState(currentUser.avatarUrl);
+  const [avatarUrl, setAvatarUrl] = useState(currentUser.avatarUrl || '');
   const [statusText, setStatusText] = useState(currentUser.statusText || '');
   const [isSaving, setIsSaving] = useState(false);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
@@ -30,14 +31,6 @@ export function UserProfileModal({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   if (!isOpen) return null;
-
-  const defaultAvatars = [
-    'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-    'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
-    'https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=150&auto=format&fit=crop&q=80',
-    'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80',
-    'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=150&auto=format&fit=crop&q=80',
-  ];
 
   const handleFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -108,22 +101,19 @@ export function UserProfileModal({
         {/* Current User Card & Avatar Upload */}
         <div className="my-5 flex flex-col items-center text-center">
           <div className="relative mb-3 group">
-            <img
-              src={avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150'}
-              alt={currentUser.displayName}
-              className="w-24 h-24 rounded-full object-cover border-2 border-violet-500 shadow-xl shadow-violet-500/25"
+            <UserAvatar
+              name={displayName || currentUser.displayName}
+              avatarUrl={avatarUrl}
+              size="2xl"
+              isVIP={currentUser.isVIP}
             />
-            {currentUser.isVIP && (
-              <span className="absolute bottom-0 right-0 p-1.5 rounded-full bg-amber-500 text-zinc-950 shadow-md">
-                <Crown className="w-4 h-4" />
-              </span>
-            )}
+
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="absolute inset-0 bg-black/60 rounded-full flex flex-col items-center justify-center text-white opacity-0 group-hover:opacity-100 transition duration-200 cursor-pointer"
+              className="absolute inset-0 bg-black/60 rounded-3xl flex flex-col items-center justify-center text-white opacity-0 group-hover:opacity-100 transition duration-200 cursor-pointer"
               title="Changer ma photo"
             >
-              <Upload className="w-5 h-5 mb-0.5 text-violet-300" />
+              <Camera className="w-6 h-6 mb-0.5 text-violet-300" />
               <span className="text-[10px] font-bold">Changer</span>
             </button>
           </div>
@@ -137,21 +127,34 @@ export function UserProfileModal({
             className="hidden"
           />
 
-          {/* Button to choose from gallery/computer */}
-          <button
-            type="button"
-            id="upload-avatar-gallery-btn"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={isUploadingPhoto}
-            className="mb-3 px-4 py-2 rounded-xl bg-violet-600/20 hover:bg-violet-600/30 text-violet-300 border border-violet-500/30 text-xs font-semibold flex items-center gap-2 transition active:scale-95"
-          >
-            <Upload className="w-4 h-4 text-violet-400" />
-            <span>{isUploadingPhoto ? 'Chargement...' : 'Choisir dans la galerie ou ordinateur'}</span>
-          </button>
+          {/* Actions to upload/remove photo */}
+          <div className="flex items-center gap-2 mb-3">
+            <button
+              type="button"
+              id="upload-avatar-gallery-btn"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isUploadingPhoto}
+              className="px-3.5 py-1.5 rounded-xl bg-violet-600/20 hover:bg-violet-600/30 text-violet-300 border border-violet-500/30 text-xs font-semibold flex items-center gap-1.5 transition active:scale-95"
+            >
+              <Upload className="w-3.5 h-3.5 text-violet-400" />
+              <span>{isUploadingPhoto ? 'Chargement...' : avatarUrl ? 'Changer ma photo' : 'Importer ma photo'}</span>
+            </button>
 
-          <h3 className="text-lg font-bold text-white">{currentUser.displayName}</h3>
+            {avatarUrl && (
+              <button
+                type="button"
+                onClick={() => setAvatarUrl('')}
+                className="px-2.5 py-1.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-red-400 text-xs font-semibold flex items-center gap-1 transition"
+                title="Supprimer la photo"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+
+          <h3 className="text-lg font-bold text-white">{displayName || currentUser.displayName}</h3>
           
-          {/* Unique Profile Tag (Privacy-first, instead of displaying raw gmail) */}
+          {/* Unique Profile Tag */}
           <div className="mt-1 flex items-center gap-1.5 bg-violet-950/60 border border-violet-500/30 px-3 py-1 rounded-xl">
             <Hash className="w-3.5 h-3.5 text-violet-400" />
             <span className="font-mono font-bold text-xs text-violet-300">
@@ -242,25 +245,6 @@ export function UserProfileModal({
               placeholder="Ex: Sur my Wahou ! 💬"
               className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-900 border border-zinc-800 text-white text-sm focus:border-violet-500 focus:outline-none"
             />
-          </div>
-
-          <div>
-            <label className="block text-[11px] font-semibold text-zinc-400 mb-1.5 uppercase">
-              Ou choisir parmi les avatars par défaut :
-            </label>
-            <div className="flex items-center gap-2">
-              {defaultAvatars.map((url, i) => (
-                <img
-                  key={i}
-                  src={url}
-                  alt="Avatar option"
-                  onClick={() => setAvatarUrl(url)}
-                  className={`w-9 h-9 rounded-full object-cover cursor-pointer border-2 transition ${
-                    avatarUrl === url ? 'border-violet-500 scale-105 shadow-md shadow-violet-500/30' : 'border-zinc-800 opacity-60 hover:opacity-100'
-                  }`}
-                />
-              ))}
-            </div>
           </div>
         </div>
 
