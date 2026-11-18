@@ -1,9 +1,11 @@
 import { useState, useRef, ChangeEvent } from 'react';
-import { User, Crown, Image as ImageIcon, PhoneCall, LogOut, Check, X, Upload, Copy, Hash, Trash2, Camera, Zap } from 'lucide-react';
+import { User, Crown, Image as ImageIcon, PhoneCall, LogOut, Check, X, Upload, Copy, Hash, Trash2, Camera, Zap, Shield, KeyRound, Lock } from 'lucide-react';
 import { UserProfile } from '../types';
 import { updateUserInDb } from '../services/dbService';
 import { compressAvatarImage } from '../utils/mediaUtils';
+import { isPasswordConfigured } from '../utils/securityUtils';
 import { UserAvatar } from './UserAvatar';
+import { SetPasswordModal } from './SetPasswordModal';
 
 interface UserProfileModalProps {
   isOpen: boolean;
@@ -28,9 +30,12 @@ export function UserProfileModal({
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
   const [copiedTag, setCopiedTag] = useState(false);
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   if (!isOpen) return null;
+
+  const hasPassword = isPasswordConfigured(currentUser);
 
   const handleFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -80,20 +85,20 @@ export function UserProfileModal({
   return (
     <div
       id="profile-modal-backdrop"
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 dark:bg-black/80 backdrop-blur-md animate-fade-in"
     >
       <div
         id="profile-container"
-        className="relative w-full max-w-md bg-zinc-950 border border-zinc-800 rounded-3xl p-6 sm:p-8 text-white shadow-2xl overflow-y-auto max-h-[90vh]"
+        className="relative w-full max-w-md bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-6 sm:p-8 text-zinc-900 dark:text-white shadow-2xl overflow-y-auto max-h-[90vh]"
       >
-        <div className="flex items-center justify-between pb-4 border-b border-zinc-800">
+        <div className="flex items-center justify-between pb-4 border-b border-zinc-200 dark:border-zinc-800">
           <div className="flex items-center gap-2">
-            <span className="p-1.5 rounded-xl bg-violet-600/20 text-violet-400">
+            <span className="p-1.5 rounded-xl bg-violet-600/15 dark:bg-violet-600/20 text-violet-600 dark:text-violet-400">
               <User className="w-5 h-5" />
             </span>
-            <h2 className="text-xl font-bold text-white">Mon Profil & Paramètres</h2>
+            <h2 className="text-xl font-bold text-zinc-900 dark:text-white">Mon Profil & Paramètres</h2>
           </div>
-          <button onClick={onClose} className="p-1 rounded-full text-zinc-400 hover:text-white hover:bg-zinc-800 transition">
+          <button onClick={onClose} className="p-1 rounded-full text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 transition">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -134,9 +139,9 @@ export function UserProfileModal({
               id="upload-avatar-gallery-btn"
               onClick={() => fileInputRef.current?.click()}
               disabled={isUploadingPhoto}
-              className="px-3.5 py-1.5 rounded-xl bg-violet-600/20 hover:bg-violet-600/30 text-violet-300 border border-violet-500/30 text-xs font-semibold flex items-center gap-1.5 transition active:scale-95"
+              className="px-3.5 py-1.5 rounded-xl bg-violet-500/15 dark:bg-violet-600/20 hover:bg-violet-500/25 dark:hover:bg-violet-600/30 text-violet-700 dark:text-violet-300 border border-violet-400/40 dark:border-violet-500/30 text-xs font-semibold flex items-center gap-1.5 transition active:scale-95"
             >
-              <Upload className="w-3.5 h-3.5 text-violet-400" />
+              <Upload className="w-3.5 h-3.5 text-violet-600 dark:text-violet-400" />
               <span>{isUploadingPhoto ? 'Chargement...' : avatarUrl ? 'Changer ma photo' : 'Importer ma photo'}</span>
             </button>
 
@@ -144,7 +149,7 @@ export function UserProfileModal({
               <button
                 type="button"
                 onClick={() => setAvatarUrl('')}
-                className="px-2.5 py-1.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-red-400 text-xs font-semibold flex items-center gap-1 transition"
+                className="px-2.5 py-1.5 rounded-xl bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-500 dark:text-zinc-400 hover:text-red-500 dark:hover:text-red-400 text-xs font-semibold flex items-center gap-1 transition"
                 title="Supprimer la photo"
               >
                 <Trash2 className="w-3.5 h-3.5" />
@@ -152,55 +157,55 @@ export function UserProfileModal({
             )}
           </div>
 
-          <h3 className="text-lg font-bold text-white">{displayName || currentUser.displayName}</h3>
+          <h3 className="text-lg font-bold text-zinc-900 dark:text-white">{displayName || currentUser.displayName}</h3>
           
           {/* Unique Profile Tag */}
-          <div className="mt-1 flex items-center gap-1.5 bg-violet-950/60 border border-violet-500/30 px-3 py-1 rounded-xl">
-            <Hash className="w-3.5 h-3.5 text-violet-400" />
-            <span className="font-mono font-bold text-xs text-violet-300">
+          <div className="mt-1 flex items-center gap-1.5 bg-violet-50 dark:bg-violet-950/60 border border-violet-300 dark:border-violet-500/30 px-3 py-1 rounded-xl">
+            <Hash className="w-3.5 h-3.5 text-violet-600 dark:text-violet-400" />
+            <span className="font-mono font-bold text-xs text-violet-700 dark:text-violet-300">
               {currentUser.profileTag || '#MonProfil@'}
             </span>
             <button
               onClick={handleCopyTag}
-              className="p-1 rounded text-violet-400 hover:text-white transition"
+              className="p-1 rounded text-violet-500 dark:text-violet-400 hover:text-violet-800 dark:hover:text-white transition"
               title="Copier mon identifiant"
             >
-              {copiedTag ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+              {copiedTag ? <Check className="w-3 h-3 text-emerald-500 dark:text-emerald-400" /> : <Copy className="w-3 h-3" />}
             </button>
           </div>
         </div>
 
         {/* Quota Balances & Forfait Pass */}
-        <div className="p-4 rounded-2xl bg-zinc-900/80 border border-zinc-800 space-y-3 mb-5">
+        <div className="p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800 space-y-3 mb-5">
           <div className="flex items-center justify-between text-xs">
-            <span className="font-semibold text-zinc-400">Statut Forfaits</span>
+            <span className="font-semibold text-zinc-500 dark:text-zinc-400">Statut Forfaits</span>
             {currentUser.isVIP ? (
-              <span className="px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 font-bold text-[10px] border border-amber-500/30">
+              <span className="px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-700 dark:text-amber-300 font-bold text-[10px] border border-amber-500/30">
                 👑 MEMBRE VIP ILLIMITÉ
               </span>
             ) : (
-              <span className="px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-300 text-[10px]">
+              <span className="px-2 py-0.5 rounded-full bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-[10px]">
                 Standard Gratuit
               </span>
             )}
           </div>
 
           <div className="grid grid-cols-2 gap-2 text-xs">
-            <div className="p-2.5 rounded-xl bg-zinc-950 flex items-center gap-2">
-              <ImageIcon className="w-4 h-4 text-pink-400 shrink-0" />
+            <div className="p-2.5 rounded-xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800/80 flex items-center gap-2">
+              <ImageIcon className="w-4 h-4 text-pink-500 dark:text-pink-400 shrink-0" />
               <div>
-                <div className="text-[10px] text-zinc-400">Médias (Photos/Vidéos)</div>
-                <div className="font-bold text-white">
+                <div className="text-[10px] text-zinc-500 dark:text-zinc-400">Médias (Photos/Vidéos)</div>
+                <div className="font-bold text-zinc-900 dark:text-white">
                   {currentUser.isVIP ? 'Illimité' : `${currentUser.mediaQuota || 0} restants`}
                 </div>
               </div>
             </div>
 
-            <div className="p-2.5 rounded-xl bg-zinc-950 flex items-center gap-2">
-              <PhoneCall className="w-4 h-4 text-blue-400 shrink-0" />
+            <div className="p-2.5 rounded-xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800/80 flex items-center gap-2">
+              <PhoneCall className="w-4 h-4 text-blue-500 dark:text-blue-400 shrink-0" />
               <div>
-                <div className="text-[10px] text-zinc-400">Appels HD</div>
-                <div className="font-bold text-white">
+                <div className="text-[10px] text-zinc-500 dark:text-zinc-400">Appels HD</div>
+                <div className="font-bold text-zinc-900 dark:text-white">
                   {currentUser.isVIP ? 'Illimité' : `${currentUser.callMinutes || 0} min`}
                 </div>
               </div>
@@ -223,19 +228,19 @@ export function UserProfileModal({
         {/* Editable Fields */}
         <div className="space-y-3">
           <div>
-            <label className="block text-[11px] font-semibold text-zinc-400 mb-1 uppercase">
+            <label className="block text-[11px] font-semibold text-zinc-500 dark:text-zinc-400 mb-1 uppercase">
               Nom / Pseudo affiché
             </label>
             <input
               type="text"
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
-              className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-900 border border-zinc-800 text-white text-sm focus:border-violet-500 focus:outline-none"
+              className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-white text-sm focus:border-violet-500 focus:outline-none"
             />
           </div>
 
           <div>
-            <label className="block text-[11px] font-semibold text-zinc-400 mb-1 uppercase">
+            <label className="block text-[11px] font-semibold text-zinc-500 dark:text-zinc-400 mb-1 uppercase">
               Statut d'humeur
             </label>
             <input
@@ -243,16 +248,76 @@ export function UserProfileModal({
               value={statusText}
               onChange={(e) => setStatusText(e.target.value)}
               placeholder="Ex: Sur my Wahou ! 💬"
-              className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-900 border border-zinc-800 text-white text-sm focus:border-violet-500 focus:outline-none"
+              className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-white text-sm focus:border-violet-500 focus:outline-none"
             />
           </div>
         </div>
 
+        {/* Security & Password Section */}
+        <div className="mt-4 p-3.5 rounded-2xl bg-zinc-50 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div
+              className={`p-2 rounded-xl shrink-0 ${
+                hasPassword
+                  ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+                  : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'
+              }`}
+            >
+              <Shield className="w-4 h-4" />
+            </div>
+            <div className="min-w-0">
+              <div className="text-xs font-bold text-zinc-900 dark:text-white flex items-center gap-1.5 flex-wrap">
+                <span>Mot de passe du compte</span>
+                {hasPassword ? (
+                  <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold px-1.5 py-0.5 rounded-md bg-emerald-500/10 border border-emerald-500/20">
+                    Protégé 🔒
+                  </span>
+                ) : (
+                  <span className="text-[10px] text-amber-600 dark:text-amber-400 font-semibold px-1.5 py-0.5 rounded-md bg-amber-500/10 border border-amber-500/20">
+                    À configurer ⚠️
+                  </span>
+                )}
+              </div>
+              <div className="text-[11px] text-zinc-500 dark:text-zinc-400 truncate">
+                {hasPassword
+                  ? 'Requis pour toute future connexion'
+                  : 'Définissez votre mot de passe pour sécuriser vos discussions'}
+              </div>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setIsPasswordModalOpen(true)}
+            className="px-3 py-1.5 rounded-xl bg-zinc-200 dark:bg-white/10 hover:bg-zinc-300 dark:hover:bg-white/15 text-zinc-900 dark:text-white text-xs font-bold transition flex items-center gap-1.5 shrink-0 active:scale-95"
+          >
+            <KeyRound className="w-3.5 h-3.5 text-zinc-600 dark:text-zinc-300" />
+            <span>{hasPassword ? 'Modifier' : 'Configurer'}</span>
+          </button>
+        </div>
+
+        {/* Modal to configure or change password */}
+        <SetPasswordModal
+          isOpen={isPasswordModalOpen}
+          onClose={() => setIsPasswordModalOpen(false)}
+          user={currentUser}
+          title={hasPassword ? 'Modifier votre mot de passe' : 'Configurer votre mot de passe'}
+          description={
+            hasPassword
+              ? 'Mettez à jour le mot de passe qui protège vos discussions.'
+              : 'Enregistrez votre mot de passe pour sécuriser définitivement votre compte.'
+          }
+          onPasswordSet={(updated) => {
+            currentUser.passwordHash = updated.passwordHash;
+            currentUser.hasPassword = true;
+            setIsPasswordModalOpen(false);
+          }}
+        />
+
         {/* Footer Actions */}
-        <div className="mt-6 pt-4 border-t border-zinc-800 flex items-center justify-between">
+        <div className="mt-6 pt-4 border-t border-zinc-200 dark:border-zinc-800 flex items-center justify-between">
           <button
             onClick={onLogout}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-red-950/40 border border-red-500/30 text-red-400 text-xs font-semibold hover:bg-red-900/50 transition"
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-300 dark:border-red-500/30 text-red-600 dark:text-red-400 text-xs font-semibold hover:bg-red-100 dark:hover:bg-red-900/50 transition"
           >
             <LogOut className="w-3.5 h-3.5" />
             <span>Déconnexion</span>
@@ -270,9 +335,9 @@ export function UserProfileModal({
         </div>
 
         {/* Official Developer Signature */}
-        <div className="mt-4 pt-2 border-t border-zinc-900 text-center">
+        <div className="mt-4 pt-2 border-t border-zinc-200 dark:border-zinc-900 text-center">
           <p className="text-[11px] font-semibold text-zinc-500">
-            ⚡ <span className="text-violet-400">développer part wastus spart 2026</span>
+            ⚡ <span className="text-violet-600 dark:text-violet-400">développer part wastus spart 2026</span>
           </p>
         </div>
       </div>

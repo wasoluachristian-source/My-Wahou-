@@ -43,6 +43,8 @@ import {
 } from '../services/dbService';
 import { compressImageFile } from '../utils/mediaUtils';
 import { AdminFirebaseManager } from './AdminFirebaseManager';
+import { UserAvatar } from './UserAvatar';
+import { BrandBirdLogo } from './BrandBirdLogo';
 
 interface AdminDashboardProps {
   currentUser: UserProfile;
@@ -80,6 +82,7 @@ export function AdminDashboard({
   const [announcementInput, setAnnouncementInput] = useState(appSettings.announcement);
   const [showAnnouncement, setShowAnnouncement] = useState(appSettings.showAnnouncement);
   const [primaryColor, setPrimaryColor] = useState(appSettings.primaryColor || '#7C3AED');
+  const [themeModeInput, setThemeModeInput] = useState<'dark' | 'light'>(appSettings.themeMode || 'dark');
   const [isSavingSettings, setIsSavingSettings] = useState(false);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const [saveSuccessMsg, setSaveSuccessMsg] = useState('');
@@ -131,6 +134,7 @@ export function AdminDashboard({
         announcement: announcementInput,
         showAnnouncement: showAnnouncement,
         primaryColor: primaryColor,
+        themeMode: themeModeInput,
       });
       setSaveSuccessMsg('Paramètres & Logo mis à jour en temps réel !');
       setTimeout(() => setSaveSuccessMsg(''), 3000);
@@ -141,11 +145,11 @@ export function AdminDashboard({
     }
   };
 
-  // Preset logo options
+  // Preset logo options (local high-availability bird assets)
   const presetLogos = [
-    { label: 'Wahou Violet Neon', url: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=120&auto=format&fit=crop&q=80' },
-    { label: 'Wahou Cyber Spark', url: 'https://images.unsplash.com/photo-1550684848-fac1c5b4e853?w=120&auto=format&fit=crop&q=80' },
-    { label: 'Wahou Minimal Gold', url: 'https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?w=120&auto=format&fit=crop&q=80' },
+    { label: 'Oiseau my Wahou (Transparent)', url: '/bird-logo.png' },
+    { label: 'Icône Lancement my Wahou', url: '/icon-512.png' },
+    { label: 'Icône Compacte my Wahou', url: '/pwa-maskable-512x512.png' },
   ];
 
   // User Action Handlers
@@ -229,28 +233,28 @@ export function AdminDashboard({
   return (
     <div
       id="admin-dashboard-overlay"
-      className="fixed inset-0 z-50 bg-black/85 backdrop-blur-xl flex flex-col p-2 sm:p-5 overflow-hidden text-zinc-100 animate-fade-in"
+      className="fixed inset-0 z-50 bg-black/60 dark:bg-black/85 backdrop-blur-xl flex flex-col p-2 sm:p-5 overflow-hidden text-zinc-900 dark:text-zinc-100 animate-fade-in"
     >
-      <div className="w-full max-w-7xl mx-auto flex flex-col h-full bg-zinc-950 border border-zinc-800 rounded-3xl overflow-hidden shadow-2xl">
+      <div className="w-full max-w-7xl mx-auto flex flex-col h-full bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-3xl overflow-hidden shadow-2xl">
         {/* Top Bar */}
-        <div className="p-4 sm:p-5 border-b border-zinc-800 flex flex-wrap items-center justify-between gap-4 bg-zinc-900/50">
+        <div className="p-4 sm:p-5 border-b border-zinc-200 dark:border-zinc-800 flex flex-wrap items-center justify-between gap-4 bg-zinc-50 dark:bg-zinc-900/50">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-violet-600 via-pink-500 to-amber-400 flex items-center justify-center text-white shadow-lg shadow-violet-600/30">
               <Shield className="w-6 h-6" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="text-xl sm:text-2xl font-black text-white">
+                <h1 className="text-xl sm:text-2xl font-black text-zinc-900 dark:text-white">
                   Espace Administrateur & Services
                 </h1>
-                <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30">
                   Super Admin
                 </span>
               </div>
-              <div className="flex items-center gap-2 text-xs text-zinc-400">
-                <span>Gestionnaire my Wahou • Connecté : <strong className="text-violet-400">{currentUser.email}</strong></span>
-                <span className="hidden md:inline text-zinc-600">•</span>
-                <span className="hidden md:inline text-violet-300 font-bold">⚡ développer part wastus spart 2026</span>
+              <div className="flex items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400">
+                <span>Gestionnaire my Wahou • Connecté : <strong className="text-violet-600 dark:text-violet-400">{currentUser.email}</strong></span>
+                <span className="hidden md:inline text-zinc-400 dark:text-zinc-600">•</span>
+                <span className="hidden md:inline text-violet-600 dark:text-violet-300 font-bold">⚡ développer part wastus spart 2026</span>
               </div>
             </div>
           </div>
@@ -260,7 +264,7 @@ export function AdminDashboard({
               <button
                 id="admin-open-weblink-btn"
                 onClick={onOpenWebLink}
-                className="px-3.5 py-2 rounded-xl bg-violet-600/20 hover:bg-violet-600/30 text-violet-300 border border-violet-500/30 text-xs font-bold transition flex items-center gap-1.5"
+                className="px-3.5 py-2 rounded-xl bg-violet-600/15 dark:bg-violet-600/20 hover:bg-violet-600/25 dark:hover:bg-violet-600/30 text-violet-700 dark:text-violet-300 border border-violet-500/30 text-xs font-bold transition flex items-center gap-1.5"
               >
                 <Share2 className="w-4 h-4" />
                 <span className="hidden sm:inline">Partage</span>
@@ -270,7 +274,7 @@ export function AdminDashboard({
             <button
               id="admin-close-btn"
               onClick={onClose}
-              className="px-4 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-xs sm:text-sm font-semibold transition"
+              className="px-4 py-2 rounded-xl bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-900 dark:text-white text-xs sm:text-sm font-semibold transition"
             >
               Fermer la console
             </button>
@@ -278,17 +282,17 @@ export function AdminDashboard({
         </div>
 
         {/* Navigation Tabs */}
-        <div className="flex items-center gap-2 px-4 sm:px-6 pt-3 border-b border-zinc-800 bg-zinc-900/30 overflow-x-auto">
+        <div className="flex items-center gap-2 px-4 sm:px-6 pt-3 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50/70 dark:bg-zinc-900/30 overflow-x-auto">
           <button
             id="tab-services-btn"
             onClick={() => setActiveTab('services')}
             className={`px-4 py-2.5 rounded-t-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition border-b-2 whitespace-nowrap ${
               activeTab === 'services'
-                ? 'border-violet-500 text-white bg-zinc-800/60'
-                : 'border-transparent text-zinc-400 hover:text-zinc-200'
+                ? 'border-violet-500 text-zinc-900 dark:text-white bg-white dark:bg-zinc-800/60'
+                : 'border-transparent text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
             }`}
           >
-            <Server className="w-4 h-4 text-emerald-400" />
+            <Server className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
             Espace Services & Télécom
           </button>
 
@@ -297,11 +301,11 @@ export function AdminDashboard({
             onClick={() => setActiveTab('database')}
             className={`px-4 py-2.5 rounded-t-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition border-b-2 whitespace-nowrap ${
               activeTab === 'database'
-                ? 'border-emerald-500 text-white bg-zinc-800/60'
-                : 'border-transparent text-zinc-400 hover:text-zinc-200'
+                ? 'border-emerald-500 text-zinc-900 dark:text-white bg-white dark:bg-zinc-800/60'
+                : 'border-transparent text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
             }`}
           >
-            <Database className="w-4 h-4 text-emerald-400" />
+            <Database className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
             Base Firebase & Synchronisation
           </button>
 
@@ -310,11 +314,11 @@ export function AdminDashboard({
             onClick={() => setActiveTab('users')}
             className={`px-4 py-2.5 rounded-t-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition border-b-2 whitespace-nowrap ${
               activeTab === 'users'
-                ? 'border-violet-500 text-white bg-zinc-800/60'
-                : 'border-transparent text-zinc-400 hover:text-zinc-200'
+                ? 'border-violet-500 text-zinc-900 dark:text-white bg-white dark:bg-zinc-800/60'
+                : 'border-transparent text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
             }`}
           >
-            <Users className="w-4 h-4 text-blue-400" />
+            <Users className="w-4 h-4 text-blue-500 dark:text-blue-400" />
             Gestion Utilisateurs ({allUsers.length})
           </button>
 
@@ -323,11 +327,11 @@ export function AdminDashboard({
             onClick={() => setActiveTab('branding')}
             className={`px-4 py-2.5 rounded-t-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition border-b-2 whitespace-nowrap ${
               activeTab === 'branding'
-                ? 'border-violet-500 text-white bg-zinc-800/60'
-                : 'border-transparent text-zinc-400 hover:text-zinc-200'
+                ? 'border-violet-500 text-zinc-900 dark:text-white bg-white dark:bg-zinc-800/60'
+                : 'border-transparent text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
             }`}
           >
-            <Palette className="w-4 h-4 text-pink-400" />
+            <Palette className="w-4 h-4 text-pink-500 dark:text-pink-400" />
             Logo & Personnalisation App
           </button>
 
@@ -336,11 +340,11 @@ export function AdminDashboard({
             onClick={() => setActiveTab('broadcast')}
             className={`px-4 py-2.5 rounded-t-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition border-b-2 whitespace-nowrap ${
               activeTab === 'broadcast'
-                ? 'border-violet-500 text-white bg-zinc-800/60'
-                : 'border-transparent text-zinc-400 hover:text-zinc-200'
+                ? 'border-violet-500 text-zinc-900 dark:text-white bg-white dark:bg-zinc-800/60'
+                : 'border-transparent text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
             }`}
           >
-            <Radio className="w-4 h-4 text-amber-400" />
+            <Radio className="w-4 h-4 text-amber-500 dark:text-amber-400" />
             Diffusion d'Annonces
           </button>
 
@@ -349,11 +353,11 @@ export function AdminDashboard({
             onClick={() => setActiveTab('telemetry')}
             className={`px-4 py-2.5 rounded-t-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition border-b-2 whitespace-nowrap ${
               activeTab === 'telemetry'
-                ? 'border-violet-500 text-white bg-zinc-800/60'
-                : 'border-transparent text-zinc-400 hover:text-zinc-200'
+                ? 'border-violet-500 text-zinc-900 dark:text-white bg-white dark:bg-zinc-800/60'
+                : 'border-transparent text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
             }`}
           >
-            <Activity className="w-4 h-4 text-teal-400" />
+            <Activity className="w-4 h-4 text-teal-500 dark:text-teal-400" />
             Télémétrie & Métriques
           </button>
         </div>
@@ -673,10 +677,12 @@ export function AdminDashboard({
                         <tr key={user.id} className="hover:bg-zinc-800/40 transition">
                           <td className="px-4 py-3.5">
                             <div className="flex items-center gap-3">
-                              <img
-                                src={user.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100'}
-                                alt={user.displayName}
-                                className="w-10 h-10 rounded-full object-cover border border-zinc-700"
+                              <UserAvatar
+                                name={user.displayName}
+                                avatarUrl={user.avatarUrl}
+                                size="md"
+                                isVIP={user.isVIP}
+                                isOnline={user.isOnline}
                               />
                               <div>
                                 <div className="font-bold text-white flex items-center gap-1.5">
@@ -780,29 +786,29 @@ export function AdminDashboard({
           {/* ========================================================= */}
           {activeTab === 'branding' && (
             <div className="max-w-3xl space-y-6">
-              <div className="p-6 rounded-3xl bg-zinc-900/60 border border-zinc-800 space-y-5">
-                <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                  <Palette className="w-5 h-5 text-violet-400" />
+              <div className="p-6 rounded-3xl bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200 dark:border-zinc-800 space-y-5">
+                <h3 className="text-lg font-bold text-zinc-900 dark:text-white flex items-center gap-2">
+                  <Palette className="w-5 h-5 text-violet-500 dark:text-violet-400" />
                   Identité Visuelle & Logo de l'Application
                 </h3>
 
                 {/* Nom de l'app */}
                 <div>
-                  <label className="block text-xs font-semibold text-zinc-400 mb-1.5 uppercase">
+                  <label className="block text-xs font-semibold text-zinc-500 dark:text-zinc-400 mb-1.5 uppercase">
                     Nom de l'application
                   </label>
                   <input
                     type="text"
                     value={appNameInput}
                     onChange={(e) => setAppNameInput(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-white font-bold focus:border-violet-500 focus:outline-none"
+                    className="w-full px-4 py-2.5 rounded-xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-white font-bold focus:border-violet-500 focus:outline-none"
                   />
                 </div>
 
                 {/* Logo URL & File Upload */}
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
-                    <label className="text-xs font-semibold text-zinc-400 uppercase">
+                    <label className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase">
                       Logo de l'application (Téléversement ou URL)
                     </label>
                     <input
@@ -821,15 +827,15 @@ export function AdminDashboard({
                         value={logoUrlInput}
                         onChange={(e) => setLogoUrlInput(e.target.value)}
                         placeholder="https://... ou téléversez un fichier ci-dessous"
-                        className="flex-1 px-4 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-white text-sm focus:border-violet-500 focus:outline-none"
+                        className="flex-1 px-4 py-2.5 rounded-xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-white text-sm focus:border-violet-500 focus:outline-none"
                       />
-                      {logoUrlInput && (
-                        <img
-                          src={logoUrlInput}
+                      <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-white to-sky-50 border border-violet-500 shadow-md shrink-0 flex items-center justify-center p-1 overflow-hidden">
+                        <BrandBirdLogo
+                          logoUrl={logoUrlInput}
                           alt="Logo preview"
-                          className="w-11 h-11 rounded-xl object-cover border border-violet-500 shadow-md shrink-0"
+                          className="w-full h-full object-contain"
                         />
-                      )}
+                      </div>
                     </div>
 
                     <button
@@ -837,9 +843,9 @@ export function AdminDashboard({
                       id="upload-admin-logo-btn"
                       onClick={() => logoFileInputRef.current?.click()}
                       disabled={isUploadingLogo}
-                      className="w-full py-2.5 rounded-xl bg-zinc-950 hover:bg-zinc-800 border border-dashed border-violet-500/50 text-violet-300 font-semibold text-xs flex items-center justify-center gap-2 transition active:scale-98"
+                      className="w-full py-2.5 rounded-xl bg-white dark:bg-zinc-950 hover:bg-zinc-100 dark:hover:bg-zinc-800 border border-dashed border-violet-500/50 text-violet-700 dark:text-violet-300 font-semibold text-xs flex items-center justify-center gap-2 transition active:scale-98"
                     >
-                      <Upload className="w-4 h-4 text-violet-400" />
+                      <Upload className="w-4 h-4 text-violet-500 dark:text-violet-400" />
                       <span>
                         {isUploadingLogo
                           ? 'Traitement du fichier image...'
@@ -851,7 +857,7 @@ export function AdminDashboard({
 
                 {/* Preset Logos */}
                 <div>
-                  <label className="block text-xs font-semibold text-zinc-400 mb-2 uppercase">
+                  <label className="block text-xs font-semibold text-zinc-500 dark:text-zinc-400 mb-2 uppercase">
                     Ou choisir parmi les logos officiels Wahou :
                   </label>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -861,12 +867,14 @@ export function AdminDashboard({
                         onClick={() => setLogoUrlInput(p.url)}
                         className={`p-3 rounded-2xl border flex items-center gap-3 transition text-left ${
                           logoUrlInput === p.url
-                            ? 'border-violet-500 bg-violet-900/30'
-                            : 'border-zinc-800 bg-zinc-950 hover:border-zinc-700'
+                            ? 'border-violet-500 bg-violet-50 dark:bg-violet-900/30'
+                            : 'border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 hover:border-zinc-400 dark:hover:border-zinc-700'
                         }`}
                       >
-                        <img src={p.url} alt={p.label} className="w-10 h-10 rounded-xl object-cover shrink-0" />
-                        <span className="text-xs font-bold text-white">{p.label}</span>
+                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-white to-sky-50 border border-zinc-200 dark:border-zinc-700 p-1 shrink-0 flex items-center justify-center overflow-hidden">
+                          <img src={p.url} alt={p.label} className="w-full h-full object-contain" />
+                        </div>
+                        <span className="text-xs font-bold text-zinc-900 dark:text-white">{p.label}</span>
                       </button>
                     ))}
                   </div>
@@ -875,10 +883,10 @@ export function AdminDashboard({
                 {/* Bannière d'annonce */}
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
-                    <label className="text-xs font-semibold text-zinc-400 uppercase">
+                    <label className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase">
                       Bannière d'Annonce Globale (Affichée en haut de tous les écrans)
                     </label>
-                    <label className="flex items-center gap-2 text-xs text-zinc-300 cursor-pointer">
+                    <label className="flex items-center gap-2 text-xs text-zinc-700 dark:text-zinc-300 cursor-pointer">
                       <input
                         type="checkbox"
                         checked={showAnnouncement}
@@ -892,13 +900,13 @@ export function AdminDashboard({
                     rows={2}
                     value={announcementInput}
                     onChange={(e) => setAnnouncementInput(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-white text-sm focus:border-violet-500 focus:outline-none"
+                    className="w-full px-4 py-2.5 rounded-xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-white text-sm focus:border-violet-500 focus:outline-none"
                   />
                 </div>
 
                 {/* Theme color */}
                 <div>
-                  <label className="block text-xs font-semibold text-zinc-400 mb-1.5 uppercase">
+                  <label className="block text-xs font-semibold text-zinc-500 dark:text-zinc-400 mb-1.5 uppercase">
                     Couleur d'accentuation principale
                   </label>
                   <div className="flex items-center gap-3">
@@ -908,14 +916,45 @@ export function AdminDashboard({
                       onChange={(e) => setPrimaryColor(e.target.value)}
                       className="w-10 h-10 rounded-xl bg-transparent border-0 cursor-pointer"
                     />
-                    <span className="text-sm font-mono text-zinc-300">{primaryColor}</span>
+                    <span className="text-sm font-mono text-zinc-700 dark:text-zinc-300">{primaryColor}</span>
+                  </div>
+                </div>
+
+                {/* Default App Theme Mode (Light / Dark) */}
+                <div>
+                  <label className="block text-xs font-semibold text-zinc-500 dark:text-zinc-400 mb-1.5 uppercase">
+                    Mode d'affichage global (Clair / Sombre)
+                  </label>
+                  <div className="grid grid-cols-2 gap-3 max-w-sm">
+                    <button
+                      type="button"
+                      onClick={() => setThemeModeInput('light')}
+                      className={`py-2.5 px-4 rounded-xl text-xs font-bold border transition ${
+                        themeModeInput === 'light'
+                          ? 'bg-gradient-to-r from-violet-600 to-pink-600 text-white border-violet-500 shadow'
+                          : 'bg-white dark:bg-zinc-950 text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-800 hover:text-zinc-900 dark:hover:text-white'
+                      }`}
+                    >
+                      ☀️ Mode Clair
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setThemeModeInput('dark')}
+                      className={`py-2.5 px-4 rounded-xl text-xs font-bold border transition ${
+                        themeModeInput === 'dark'
+                          ? 'bg-gradient-to-r from-violet-600 to-pink-600 text-white border-violet-500 shadow'
+                          : 'bg-white dark:bg-zinc-950 text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-800 hover:text-zinc-900 dark:hover:text-white'
+                      }`}
+                    >
+                      🌙 Mode Sombre
+                    </button>
                   </div>
                 </div>
 
                 {/* Save button */}
-                <div className="pt-3 border-t border-zinc-800 flex items-center justify-between">
+                <div className="pt-3 border-t border-zinc-200 dark:border-zinc-800 flex items-center justify-between">
                   {saveSuccessMsg ? (
-                    <span className="text-sm font-semibold text-emerald-400 flex items-center gap-1.5 animate-fade-in">
+                    <span className="text-sm font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5 animate-fade-in">
                       <CheckCircle2 className="w-4 h-4" /> {saveSuccessMsg}
                     </span>
                   ) : (

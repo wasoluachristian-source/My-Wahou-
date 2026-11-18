@@ -1,17 +1,108 @@
 <!doctype html>
-<html lang="en">
+<html lang="fr" class="dark">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <title>my Wahou - Messagerie & Forfaits</title>
     <meta name="description" content="my Wahou - Messagerie instantanée avec messages texte et vocaux gratuits, forfaits médias et appels HD." />
+    <meta property="og:title" content="my Wahou - Messagerie & Forfaits" />
+    <meta property="og:description" content="my Wahou - Messagerie instantanée avec messages texte et vocaux gratuits, forfaits médias et appels HD." />
+    <meta name="theme-color" content="#7c3aed" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="my Wahou" />
+    <link rel="icon" type="image/png" href="/bird-logo.png" />
+    <link rel="alternate icon" href="/favicon.ico" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.json" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <script>
+      // Nettoyage immédiat des Service Workers/caches en mode Preview Dev (évite tout blocage d'affichage sur iOS Safari)
+      (function () {
+        try {
+          var host = window.location.hostname || '';
+          var isDevPreview = host === 'localhost' || host === '127.0.0.1' || host.indexOf('ais-dev-') === 0;
+          if (isDevPreview && 'serviceWorker' in navigator) {
+            var hadController = Boolean(navigator.serviceWorker.controller);
+            navigator.serviceWorker.getRegistrations().then(function (regs) {
+              return Promise.all(
+                regs.map(function (r) {
+                  return r.update().catch(function () {}).then(function () {
+                    return r.unregister().catch(function () {});
+                  });
+                })
+              );
+            }).then(function () {
+              if (hadController && window.name !== '__mywahou_sw_reset') {
+                window.name = '__mywahou_sw_reset';
+                window.location.reload();
+              }
+            }).catch(function () {});
+            if ('caches' in window) {
+              caches.keys().then(function (keys) {
+                keys.forEach(function (k) { caches.delete(k).catch(function () {}); });
+              }).catch(function () {});
+            }
+          }
+        } catch (e) {}
+      })();
+    </script>
   </head>
-  <body class="bg-zinc-950 text-zinc-100 font-sans antialiased overflow-hidden selection:bg-violet-500 selection:text-white">
-    <div id="root"></div>
+  <body class="bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 font-sans antialiased overflow-hidden selection:bg-violet-500 selection:text-white transition-colors duration-300">
+    <div id="root">
+      <div id="mywahou-preboot" style="position:fixed;inset:0;width:100%;height:100%;min-height:100dvh;z-index:99998;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#09090b;color:#ffffff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;padding:24px;text-align:center;">
+        <img src="/bird-logo.png" alt="my Wahou" style="width:76px;height:76px;object-fit:contain;margin-bottom:16px;" />
+        <div style="font-size:26px;font-weight:900;letter-spacing:-0.02em;margin-bottom:8px;">my Wahou</div>
+        <div id="mywahou-preboot-status" style="font-size:12px;color:#a1a1aa;margin-bottom:16px;">Chargement de l'application...</div>
+        <div style="font-size:11px;color:#a78bfa;font-weight:700;">développé par Wastus Spart 2026</div>
+      </div>
+    </div>
+    <script>
+      (function () {
+        function showBootError(msg) {
+          var statusEl = document.getElementById('mywahou-preboot-status');
+          if (statusEl) {
+            statusEl.style.color = '#fca5a5';
+            statusEl.textContent = 'Erreur de démarrage : ' + msg;
+          }
+        }
+        window.addEventListener('error', function (ev) {
+          if (document.getElementById('mywahou-preboot')) {
+            var targetSrc = ev && ev.target && (ev.target.src || ev.target.href);
+            var msg = (ev && ev.message) || (targetSrc ? 'Chargement impossible : ' + targetSrc : 'Erreur de script');
+            showBootError(msg);
+          }
+        }, true);
+        window.addEventListener('unhandledrejection', function (ev) {
+          if (document.getElementById('mywahou-preboot')) {
+            var reason = ev && ev.reason ? (ev.reason.message || String(ev.reason)) : 'Promesse rejetée';
+            showBootError(reason);
+          }
+        });
+      })();
+    </script>
     <script type="module" src="/src/main.tsx"></script>
+    <script>
+      // Enregistrement du Service Worker uniquement en production / PWA installée (hors iframe Dev Preview)
+      (function () {
+        try {
+          var host = window.location.hostname || '';
+          var isDevPreview = host === 'localhost' || host === '127.0.0.1' || host.indexOf('ais-dev-') === 0;
+          if (!isDevPreview && 'serviceWorker' in navigator) {
+            window.addEventListener('load', function () {
+              navigator.serviceWorker
+                .register('/sw.js', { scope: '/', updateViaCache: 'none' })
+                .then(function (reg) {
+                  reg.update().catch(function () {});
+                })
+                .catch(function () {});
+            });
+          }
+        } catch (e) {}
+      })();
+    </script>
   </body>
 </html>
-

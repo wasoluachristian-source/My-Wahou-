@@ -77,3 +77,39 @@ export const getVideoDuration = (file: File): Promise<number> => {
     video.src = URL.createObjectURL(file);
   });
 };
+
+/**
+ * Télécharge et enregistre une photo ou une vidéo directement sur l'appareil (iPhone, Android, PC)
+ */
+export const downloadMediaFile = (mediaUrl: string, defaultFilename: string = 'myWahou_media') => {
+  if (!mediaUrl) return;
+
+  try {
+    const link = document.createElement('a');
+    link.href = mediaUrl;
+    link.download = defaultFilename;
+    link.target = '_blank';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  } catch (err) {
+    console.warn('Direct download click failed, attempting blob fallback:', err);
+    try {
+      fetch(mediaUrl)
+        .then((res) => res.blob())
+        .then((blob) => {
+          const blobUrl = window.URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = blobUrl;
+          link.download = defaultFilename;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          setTimeout(() => window.URL.revokeObjectURL(blobUrl), 1000);
+        })
+        .catch((e) => console.error('Blob download failed:', e));
+    } catch (e) {
+      console.error('Download error:', e);
+    }
+  }
+};

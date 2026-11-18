@@ -1,4 +1,4 @@
-import React from 'react';
+import { useState, useEffect } from 'react';
 import { Crown } from 'lucide-react';
 
 interface UserAvatarProps {
@@ -93,12 +93,19 @@ export function UserAvatar({
   const config = SIZE_CONFIGS[size] || SIZE_CONFIGS.md;
   const initials = getInitials(name);
   const gradient = getGradientForName(name);
+  const [imgError, setImgError] = useState(false);
+
+  useEffect(() => {
+    setImgError(false);
+  }, [avatarUrl]);
 
   const hasRealCustomPhoto =
+    !imgError &&
     avatarUrl &&
     avatarUrl.trim().length > 0 &&
     !avatarUrl.includes('placeholder') &&
-    (avatarUrl.startsWith('data:image') || avatarUrl.startsWith('http'));
+    !avatarUrl.includes('unsplash.com') &&
+    (avatarUrl.startsWith('data:image') || avatarUrl.startsWith('http') || avatarUrl.startsWith('/'));
 
   return (
     <div className={`relative inline-flex items-center justify-center shrink-0 ${config.container} ${className}`}>
@@ -106,11 +113,9 @@ export function UserAvatar({
         <img
           src={avatarUrl}
           alt={name}
+          referrerPolicy="no-referrer"
           className={`w-full h-full object-cover shadow-sm ${config.rounded} border border-zinc-800/80`}
-          onError={(e) => {
-            // fallback if image link fails
-            (e.currentTarget as HTMLElement).style.display = 'none';
-          }}
+          onError={() => setImgError(true)}
         />
       ) : (
         <div

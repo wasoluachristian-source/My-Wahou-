@@ -17,6 +17,12 @@ export interface UserProfile {
   lastSeen: number;
   statusText?: string;
   isOnline?: boolean;
+  passwordHash?: string; // Hashed password to secure the account
+  hasPassword?: boolean; // Convenience flag indicating password has been set
+  ringtoneId?: string; // Selected ringtone ('wahou_1' .. 'wahou_10' or 'custom_file')
+  customRingtoneName?: string; // Name of phone audio file selected as ringtone
+  notificationsEnabled?: boolean; // Web notifications preference
+  backgroundNotificationsEnabled?: boolean; // Allow notifications even when logged out or closed
 }
 
 export type MessageType = 'text' | 'voice' | 'image' | 'video' | 'call_log';
@@ -67,6 +73,10 @@ export interface Conversation {
   id: string;
   name?: string;
   isGroup: boolean;
+  type?: 'direct' | 'group' | 'lisanga';
+  isPinned?: boolean;
+  isFavorite?: boolean;
+  isArchived?: boolean;
   participantIds: string[];
   participants?: UserProfile[];
   lastMessage?: {
@@ -108,6 +118,7 @@ export interface AppSettings {
   announcement: string;
   showAnnouncement: boolean;
   primaryColor: string; // hex
+  themeMode?: 'dark' | 'light';
   freeTextUnlimited: boolean;
   freeVoiceUnlimited: boolean;
   updatedAt: number;
@@ -132,16 +143,24 @@ export interface FirebaseDatabaseStats {
 
 export interface CallSession {
   id: string;
+  conversationId?: string;
   callerId: string;
   callerName: string;
   callerAvatar: string;
   receiverId: string;
-  receiverName: string;
-  receiverAvatar: string;
-  isVideo: boolean;
+  receiverName?: string;
+  receiverAvatar?: string;
+  isVideo?: boolean;
+  type?: 'audio' | 'video';
   status: 'ringing' | 'connected' | 'ended' | 'declined';
   startTime?: number;
+  startedAt?: number;
+  endedAt?: number;
+  createdAt?: number;
   duration?: number;
+  durationSeconds?: number;
+  offer?: { type: string; sdp?: string };
+  answer?: { type: string; sdp?: string };
 }
 
 export type StoryQuality = 'eco' | 'standard' | 'hd';
@@ -212,6 +231,10 @@ export interface LisangaGroup {
   lastActivity: number;
   createdAt: number;
   isOfficial?: boolean;
+  isClosedForMembers?: boolean;
+  isSuspended?: boolean;
+  suspendedUntil?: number | null;
+  suspensionReason?: string;
 }
 
 export interface LisangaMessage {

@@ -4,6 +4,7 @@ import {
   getDocs,
   getDoc,
   setDoc,
+  addDoc,
   updateDoc,
   deleteDoc,
   onSnapshot,
@@ -19,6 +20,7 @@ import {
   ChatMessage,
   Conversation,
   AppSettings,
+  CallSession,
   LiveStory,
   BusinessAd,
   LisangaGroup,
@@ -103,7 +105,37 @@ export const isProfileTagAvailable = (tag: string, allUsers: UserProfile[], curr
 };
 
 /**
+ * Gestion des surnoms personnalisés par utilisateur (Option surnom privée)
+ */
+export const getUserContactNickname = (currentUserId?: string, contactId?: string): string => {
+  if (typeof window === 'undefined' || !currentUserId || !contactId) return '';
+  try {
+    const raw = localStorage.getItem(`mywahou_nicknames_${currentUserId}`);
+    if (raw) {
+      const map = JSON.parse(raw);
+      return map[contactId] || '';
+    }
+  } catch {}
+  return '';
+};
+
+export const setUserContactNickname = (currentUserId: string, contactId: string, nickname: string) => {
+  if (typeof window === 'undefined' || !currentUserId || !contactId) return;
+  try {
+    const raw = localStorage.getItem(`mywahou_nicknames_${currentUserId}`);
+    const map = raw ? JSON.parse(raw) : {};
+    if (nickname.trim()) {
+      map[contactId] = nickname.trim();
+    } else {
+      delete map[contactId];
+    }
+    localStorage.setItem(`mywahou_nicknames_${currentUserId}`, JSON.stringify(map));
+  } catch {}
+};
+
+/**
  * Calcule le nom d'affichage idéal pour un contact ou une discussion :
+ * 0. Priorité absolue : Surnom privé personnalisé attribué par l'utilisateur actif
  * 1. Utilise le nom de profil (displayName) s'il est renseigné et personnalisé.
  * 2. Si le nom de profil n'a pas encore été mis à jour (ou est générique / vide / "Discussion"),
  *    utilise le début du compte Gmail (la partie avant le @, ex: "wasoluachristian" pour "wasoluachristian@gmail.com").
@@ -112,8 +144,18 @@ export const isProfileTagAvailable = (tag: string, allUsers: UserProfile[], curr
 export const getContactDisplayName = (
   participant?: Partial<UserProfile> | null,
   convo?: Partial<Conversation> | null,
-  fallbackOtherId?: string
+  fallbackOtherId?: string,
+  currentUserId?: string
 ): string => {
+  // 0. Surnom privé défini par l'utilisateur
+  if (currentUserId && (participant?.id || fallbackOtherId)) {
+    const targetId = participant?.id || fallbackOtherId;
+    const customNickname = getUserContactNickname(currentUserId, targetId);
+    if (customNickname) {
+      return customNickname;
+    }
+  }
+
   if (participant) {
     const rawName = (participant.displayName || '').trim();
     const isGeneric =
@@ -130,19 +172,20 @@ export const getContactDisplayName = (
       return rawName;
     }
 
-    // 2. Si le profil n'est pas encore mis à jour : début du compte Gmail / email
-    if (participant.email && participant.email.includes('@')) {
-      const emailPrefix = participant.email.split('@')[0].trim();
-      if (emailPrefix) {
-        return emailPrefix;
-      }
-    }
-
-    // 3. Identifiant unique (#Tag@)
+    // 2. Identifiant unique (#Tag@)
     if (participant.profileTag) {
       const cleanTag = participant.profileTag.replace(/^#+/, '').replace(/@+$/, '').trim();
       if (cleanTag) return cleanTag;
-      return participant.profileTag;
+    }
+
+    // 3. Si le profil n'est pas encore mis à jour : début du compte Gmail / email
+    if (participant.email && participant.email.includes('@')) {
+      const emailPrefix = participant.email.split('@')[0].trim();
+      if (emailPrefix) {
+        return emailPrefix
+          .replace(/[._]/g, ' ')
+          .replace(/\b\w/g, (c) => c.toUpperCase());
+      }
     }
 
     if (rawName) return rawName;
@@ -160,27 +203,42 @@ export const getContactDisplayName = (
     }
   }
 
-  // Si on a l'identifiant ou un email de secours
-  if (fallbackOtherId) {
-    if (fallbackOtherId.includes('@')) {
-      return fallbackOtherId.split('@')[0];
-    }
-    const emailMatch = fallbackOtherId.match(/([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/);
-    if (emailMatch && emailMatch[1]) {
-      return emailMatch[1].split('@')[0];
-    }
-    const cleanId = fallbackOtherId.replace(/^user_/, '').replace(/^direct_/, '');
-    if (cleanId && !cleanId.startsWith('17') && cleanId.length > 2) {
-      return cleanId;
+  // Si la conversation a un dernier message envoyé par l'autre participant
+  if (convo?.lastMessage?.senderName) {
+    const sender = convo.lastMessage.senderName.trim();
+    if (
+      sender &&
+      sender.toLowerCase() !== 'vous' &&
+      sender.toLowerCase() !== 'contact' &&
+      sender.toLowerCase() !== 'utilisateur'
+    ) {
+      return sender;
     }
   }
 
-  return 'Contact';
+  // Si on a l'identifiant ou un email de secours
+  if (fallbackOtherId) {
+    if (fallbackOtherId.includes('@')) {
+      const part = fallbackOtherId.split('@')[0];
+      return part.replace(/[._]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+    }
+    const emailMatch = fallbackOtherId.match(/([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/);
+    if (emailMatch && emailMatch[1]) {
+      const part = emailMatch[1].split('@')[0];
+      return part.replace(/[._]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+    }
+    const cleanId = fallbackOtherId.replace(/^user_/, '').replace(/^usr_/, '').replace(/^direct_/, '');
+    if (cleanId && !cleanId.startsWith('17') && cleanId.length > 2) {
+      return cleanId.replace(/[._]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+    }
+  }
+
+  return 'Membre my Wahou';
 };
 
 export const DEFAULT_APP_SETTINGS: AppSettings = {
   appName: 'my Wahou',
-  logoUrl: '',
+  logoUrl: '/bird-logo.png',
   tagline: 'Messagerie nouvelle génération sans forfait texte et vocal',
   announcement: '📢 Bienvenue sur my Wahou ! Messages texte et notes vocales 100% gratuits & illimités.',
   showAnnouncement: true,
@@ -221,7 +279,20 @@ export const subscribeAppSettings = (callback: (settings: AppSettings) => void) 
   const docRef = doc(db, 'settings', 'global_config');
   return onSnapshot(docRef, (snapshot) => {
     if (snapshot.exists()) {
-      callback(snapshot.data() as AppSettings);
+      const data = snapshot.data() as AppSettings;
+      const rawLogo = (data.logoUrl || '').trim().toLowerCase();
+      const needsBirdHeal =
+        !rawLogo ||
+        rawLogo.includes('unsplash.com') ||
+        rawLogo.includes('placeholder') ||
+        rawLogo === '/logo.png';
+      if (needsBirdHeal) {
+        const healed = { ...DEFAULT_APP_SETTINGS, ...data, logoUrl: '/bird-logo.png' };
+        setDoc(docRef, { logoUrl: '/bird-logo.png', updatedAt: Date.now() }, { merge: true }).catch(() => {});
+        callback(healed);
+      } else {
+        callback(data);
+      }
     } else {
       setDoc(docRef, cleanObjectForFirestore(DEFAULT_APP_SETTINGS)).catch(console.error);
       callback(DEFAULT_APP_SETTINGS);
@@ -320,6 +391,14 @@ export const saveUserToDb = async (user: UserProfile) => {
 export const updateUserInDb = async (userId: string, updates: Partial<UserProfile>) => {
   const docRef = doc(db, 'users', userId);
   await updateDoc(docRef, cleanObjectForFirestore(updates));
+};
+
+export const setUserPasswordInDb = async (userId: string, passwordHash: string) => {
+  const docRef = doc(db, 'users', userId);
+  await updateDoc(docRef, {
+    passwordHash,
+    hasPassword: true,
+  });
 };
 
 export const updateUserPresenceInDb = async (userId: string, isOnline: boolean) => {
@@ -831,6 +910,176 @@ export const deleteMessageFromDb = async (messageId: string) => {
   await deleteDoc(docRef);
 };
 
+/**
+ * Option 1 : Épingler en tête jusqu'à 3 conversations choisies par l'utilisateur
+ */
+export const getUserPinnedConversations = (userId: string): string[] => {
+  if (typeof window === 'undefined' || !userId) return [];
+  try {
+    const raw = localStorage.getItem(`mywahou_pinned_${userId}`);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+};
+
+export const togglePinUserConversation = (
+  userId: string,
+  conversationId: string
+): { success: boolean; isPinned: boolean; message?: string } => {
+  const current = getUserPinnedConversations(userId);
+  const exists = current.includes(conversationId);
+  if (exists) {
+    const updated = current.filter((id) => id !== conversationId);
+    try {
+      localStorage.setItem(`mywahou_pinned_${userId}`, JSON.stringify(updated));
+    } catch {}
+    return { success: true, isPinned: false };
+  } else {
+    if (current.length >= 3) {
+      return {
+        success: false,
+        isPinned: false,
+        message: 'Maximum 3 conversations épinglées en tête atteint. Désépinglez-en une d’abord.',
+      };
+    }
+    const updated = [conversationId, ...current];
+    try {
+      localStorage.setItem(`mywahou_pinned_${userId}`, JSON.stringify(updated));
+    } catch {}
+    return { success: true, isPinned: true };
+  }
+};
+
+/**
+ * Option 3 : Archiver une discussion (placée dans l'espace Archivées)
+ */
+export const getUserArchivedConversations = (userId: string): string[] => {
+  if (typeof window === 'undefined' || !userId) return [];
+  try {
+    const raw = localStorage.getItem(`mywahou_archived_${userId}`);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+};
+
+export const toggleArchiveUserConversation = (userId: string, conversationId: string): boolean => {
+  const current = getUserArchivedConversations(userId);
+  const exists = current.includes(conversationId);
+  const updated = exists
+    ? current.filter((id) => id !== conversationId)
+    : [...current, conversationId];
+  try {
+    localStorage.setItem(`mywahou_archived_${userId}`, JSON.stringify(updated));
+  } catch {}
+  return !exists;
+};
+
+/**
+ * Option 4 : Favoris personnalisés (Place la discussion dans les favoris de l'utilisateur)
+ */
+export const getUserFavoriteConversations = (userId: string): string[] => {
+  if (typeof window === 'undefined' || !userId) return [];
+  try {
+    const raw = localStorage.getItem(`mywahou_favorites_${userId}`);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+};
+
+export const toggleFavoriteUserConversation = (userId: string, conversationId: string): boolean => {
+  const current = getUserFavoriteConversations(userId);
+  const exists = current.includes(conversationId);
+  const updated = exists
+    ? current.filter((id) => id !== conversationId)
+    : [...current, conversationId];
+  try {
+    localStorage.setItem(`mywahou_favorites_${userId}`, JSON.stringify(updated));
+  } catch {}
+  return !exists;
+};
+
+/**
+ * Option 2 : Supprime définitivement la discussion de l'espace discussion et TOUS les messages à l'intérieur
+ */
+export const deleteEntireConversationFromDb = async (
+  conversationId: string,
+  currentUserId?: string
+) => {
+  try {
+    // 1. Supprimer tous les messages
+    const msgsRef = collection(db, 'messages');
+    const q = query(msgsRef, where('conversationId', '==', conversationId));
+    const snap = await getDocs(q);
+    if (!snap.empty) {
+      const batch = writeBatch(db);
+      snap.docs.forEach((d) => batch.delete(d.ref));
+      await batch.commit();
+    }
+
+    // 2. Supprimer la conversation
+    await deleteDoc(doc(db, 'conversations', conversationId));
+
+    // 3. Nettoyer les caches locaux
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.removeItem(`mywahou_cached_msgs_${conversationId}`);
+      } catch {}
+      if (currentUserId) {
+        const cached = getCachedUserConversations(currentUserId);
+        const filtered = cached.filter((c) => c.id !== conversationId);
+        setCachedUserConversations(currentUserId, filtered);
+      }
+    }
+  } catch (err) {
+    console.error('Error deleting conversation and its messages:', err);
+    throw err;
+  }
+};
+
+/**
+ * Option 5 : Supprime TOUS les messages envoyés à l'intérieur d'une discussion sans supprimer la discussion elle-même
+ */
+export const clearAllMessagesInConversationFromDb = async (conversationId: string) => {
+  try {
+    // 1. Supprimer tous les messages
+    const msgsRef = collection(db, 'messages');
+    const q = query(msgsRef, where('conversationId', '==', conversationId));
+    const snap = await getDocs(q);
+    if (!snap.empty) {
+      const batch = writeBatch(db);
+      snap.docs.forEach((d) => batch.delete(d.ref));
+      await batch.commit();
+    }
+
+    // 2. Mettre à jour la conversation pour réinitialiser le dernier message
+    const convoRef = doc(db, 'conversations', conversationId);
+    await updateDoc(convoRef, {
+      lastMessage: {
+        text: '🧹 Messages effacés',
+        senderName: '',
+        senderId: '',
+        timestamp: Date.now(),
+        type: 'text',
+        isRead: true,
+      },
+      updatedAt: Date.now(),
+    });
+
+    // 3. Vider le cache local des messages
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.removeItem(`mywahou_cached_msgs_${conversationId}`);
+      } catch {}
+    }
+  } catch (err) {
+    console.error('Error clearing messages in conversation:', err);
+    throw err;
+  }
+};
+
 // ==========================================
 // JOURNÉE LIVE (STORIES 24H)
 // ==========================================
@@ -1081,15 +1330,12 @@ export const subscribeLisangaGroups = (callback: (groups: LisangaGroup[]) => voi
         groups.sort((a, b) => (b.lastActivity || 0) - (a.lastActivity || 0));
         callback(groups);
       } else {
-        INITIAL_LISANGA_GROUPS.forEach((g) => {
-          setDoc(doc(db, 'lisanga_groups', g.id), g).catch(console.error);
-        });
-        callback(INITIAL_LISANGA_GROUPS);
+        callback([]);
       }
     },
     (err) => {
       console.warn('Firestore lisanga groups error:', err);
-      callback(INITIAL_LISANGA_GROUPS);
+      callback([]);
     }
   );
 };
@@ -1198,6 +1444,218 @@ export const sendLisangaMessageToDb = async (message: LisangaMessage) => {
       lastActivity: message.timestamp,
     })
   ).catch(() => {});
+};
+
+/**
+ * Fermer ou rouvrir la discussion du groupe pour les non-administrateurs
+ * (Seuls les administrateurs peuvent envoyer des messages quand fermé)
+ */
+export const toggleGroupDiscussionClosedForMembersInDb = async (
+  groupId: string,
+  isClosed: boolean
+) => {
+  const docRef = doc(db, 'lisanga_groups', groupId);
+  await updateDoc(docRef, {
+    isClosedForMembers: isClosed,
+    lastActivity: Date.now(),
+  });
+};
+
+/**
+ * Ajouter ou retirer un administrateur dans le groupe (Réservé au propriétaire du groupe)
+ */
+export const toggleGroupAdminInDb = async (
+  groupId: string,
+  memberId: string,
+  makeAdmin: boolean
+) => {
+  const docRef = doc(db, 'lisanga_groups', groupId);
+  const snap = await getDoc(docRef);
+  if (snap.exists()) {
+    const data = snap.data() as LisangaGroup;
+    // Le propriétaire du groupe reste toujours administrateur principal
+    if (memberId === data.creatorId && !makeAdmin) return;
+    const currentAdmins = data.adminIds || [];
+    let updatedAdmins: string[];
+    if (makeAdmin) {
+      updatedAdmins = Array.from(new Set([...currentAdmins, memberId]));
+    } else {
+      updatedAdmins = currentAdmins.filter((id) => id !== memberId);
+    }
+    await updateDoc(docRef, {
+      adminIds: updatedAdmins,
+      lastActivity: Date.now(),
+    });
+  }
+};
+
+/**
+ * Supprimer un membre ou un administrateur nommé du groupe
+ */
+export const removeMemberFromLisangaGroupInDb = async (
+  groupId: string,
+  memberId: string
+) => {
+  const docRef = doc(db, 'lisanga_groups', groupId);
+  const snap = await getDoc(docRef);
+  if (snap.exists()) {
+    const data = snap.data() as LisangaGroup;
+    // Le propriétaire du groupe ne peut pas être supprimé de son propre groupe
+    if (memberId === data.creatorId) return;
+    const currentMembers = data.memberIds || [];
+    const currentAdmins = data.adminIds || [];
+    const updatedMembers = currentMembers.filter((id) => id !== memberId);
+    const updatedAdmins = currentAdmins.filter((id) => id !== memberId);
+
+    await updateDoc(docRef, {
+      memberIds: updatedMembers,
+      adminIds: updatedAdmins,
+      membersCount: updatedMembers.length,
+      lastActivity: Date.now(),
+    });
+  }
+};
+
+// ==========================================
+// CALLS & SIGNALING (ACCEPTANCE REQUIRED)
+// ==========================================
+export const createCallSessionInDb = async (session: CallSession) => {
+  const docRef = doc(db, 'calls', session.id);
+  await setDoc(docRef, cleanObjectForFirestore(session));
+};
+
+export const updateCallSessionInDb = async (
+  callId: string,
+  updates: Partial<CallSession>
+) => {
+  const docRef = doc(db, 'calls', callId);
+  await updateDoc(docRef, cleanObjectForFirestore(updates)).catch(() => {});
+};
+
+export const subscribeCallSession = (
+  callId: string,
+  callback: (session: CallSession | null) => void
+) => {
+  if (!callId) return () => {};
+  const docRef = doc(db, 'calls', callId);
+  return onSnapshot(
+    docRef,
+    (snap) => {
+      if (snap.exists()) {
+        callback({ ...(snap.data() as CallSession), id: snap.id });
+      } else {
+        callback(null);
+      }
+    },
+    (err) => {
+      console.warn('Call session listener error:', err);
+    }
+  );
+};
+
+export const subscribeIncomingCalls = (
+  userId: string,
+  callback: (calls: CallSession[]) => void
+) => {
+  if (!userId) return () => {};
+  const colRef = collection(db, 'calls');
+  const q = query(
+    colRef,
+    where('receiverId', '==', userId)
+  );
+  return onSnapshot(
+    q,
+    (snapshot) => {
+      const now = Date.now();
+      const valid = snapshot.docs
+        .map((d) => ({ ...(d.data() as CallSession), id: d.id }))
+        .filter((c) => c.status === 'ringing' && (!c.createdAt || now - c.createdAt < 120000));
+      valid.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+      callback(valid);
+    },
+    (err) => {
+      console.warn('Incoming calls listener error:', err);
+      callback([]);
+    }
+  );
+};
+
+export const addCallCandidateInDb = async (
+  callId: string,
+  role: 'caller' | 'receiver',
+  candidate: RTCIceCandidateInit
+) => {
+  const colRef = collection(db, 'calls', callId, `${role}Candidates`);
+  await addDoc(colRef, cleanObjectForFirestore(candidate)).catch(() => {});
+};
+
+export const subscribeCallCandidates = (
+  callId: string,
+  roleToListen: 'caller' | 'receiver',
+  onCandidate: (candidate: RTCIceCandidateInit) => void
+) => {
+  if (!callId) return () => {};
+  const colRef = collection(db, 'calls', callId, `${roleToListen}Candidates`);
+  return onSnapshot(
+    colRef,
+    (snapshot) => {
+      snapshot.docChanges().forEach((change) => {
+        if (change.type === 'added') {
+          onCandidate(change.doc.data() as RTCIceCandidateInit);
+        }
+      });
+    },
+    () => {}
+  );
+};
+
+/**
+ * Suspendre un groupe par le Super Administrateur avec durée définie
+ */
+export const suspendLisangaGroupInDb = async (
+  groupId: string,
+  durationMs: number | null,
+  reason?: string
+) => {
+  const docRef = doc(db, 'lisanga_groups', groupId);
+  const suspendedUntil = durationMs ? Date.now() + durationMs : null;
+  await updateDoc(docRef, {
+    isSuspended: true,
+    suspendedUntil,
+    suspensionReason: reason || 'Suspension administrative pour vérification des règles de la communauté.',
+    lastActivity: Date.now(),
+  });
+};
+
+/**
+ * Lever la suspension d'un groupe par le Super Administrateur
+ */
+export const unsuspendLisangaGroupInDb = async (groupId: string) => {
+  const docRef = doc(db, 'lisanga_groups', groupId);
+  await updateDoc(docRef, {
+    isSuspended: false,
+    suspendedUntil: null,
+    suspensionReason: '',
+    lastActivity: Date.now(),
+  });
+};
+
+/**
+ * Fermer et supprimer définitivement un groupe par le Super Administrateur ou créateur
+ */
+export const closeLisangaGroupDefinitivelyInDb = async (groupId: string) => {
+  // 1. Supprimer tous les messages du groupe
+  const msgsRef = collection(db, 'lisanga_messages');
+  const q = query(msgsRef, where('groupId', '==', groupId));
+  const snap = await getDocs(q);
+  if (!snap.empty) {
+    const batch = writeBatch(db);
+    snap.docs.forEach((d) => batch.delete(d.ref));
+    await batch.commit();
+  }
+
+  // 2. Supprimer le document du groupe
+  await deleteDoc(doc(db, 'lisanga_groups', groupId));
 };
 
 // ==========================================

@@ -273,21 +273,21 @@ export function JourneeLiveView({
   };
 
   return (
-    <div id="journee-live-container" className="flex-1 h-full bg-zinc-950 flex flex-col overflow-y-auto select-none">
+    <div id="journee-live-container" className="flex-1 h-full bg-slate-50 dark:bg-zinc-950 flex flex-col overflow-y-auto select-none transition-colors">
       {/* Top Space Header */}
-      <div className="p-4 sm:p-6 border-b border-zinc-800/80 bg-zinc-950/80 backdrop-blur-md flex flex-wrap items-center justify-between gap-4 sticky top-0 z-20">
+      <div className="p-4 sm:p-6 border-b border-zinc-200 dark:border-zinc-800/80 bg-white/85 dark:bg-zinc-950/80 backdrop-blur-md flex flex-wrap items-center justify-between gap-4 sticky top-0 z-20">
         <div className="flex items-center gap-3">
           <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-pink-600 via-rose-500 to-amber-500 flex items-center justify-center text-white shadow-xl shadow-pink-600/30">
             <Radio className="w-6 h-6 animate-pulse" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h2 className="text-xl sm:text-2xl font-black text-white">Journée Live</h2>
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-pink-500/20 text-pink-300 border border-pink-500/30">
+              <h2 className="text-xl sm:text-2xl font-black text-zinc-900 dark:text-white">Journée Live</h2>
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-pink-500/15 dark:bg-pink-500/20 text-pink-600 dark:text-pink-300 border border-pink-500/30">
                 24H LIVE
               </span>
             </div>
-            <p className="text-xs text-zinc-400">
+            <p className="text-xs text-zinc-500 dark:text-zinc-400">
               Partagez vos textes, pensées, photos & vidéos 30s éphémères
             </p>
           </div>
@@ -295,10 +295,10 @@ export function JourneeLiveView({
 
         {/* Action Button & Stats */}
         <div className="flex items-center gap-3">
-          <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-2xl bg-zinc-900 border border-zinc-800 text-xs">
-            <Lock className="w-3.5 h-3.5 text-emerald-400" />
-            <span className="text-zinc-400">Visibilité :</span>
-            <span className="font-bold text-emerald-300">Contacts uniquement</span>
+          <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-2xl bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-xs">
+            <Lock className="w-3.5 h-3.5 text-emerald-500 dark:text-emerald-400" />
+            <span className="text-zinc-500 dark:text-zinc-400">Visibilité :</span>
+            <span className="font-bold text-emerald-600 dark:text-emerald-300">Contacts uniquement</span>
           </div>
 
           <button
@@ -317,14 +317,14 @@ export function JourneeLiveView({
 
       {/* Privacy Notice Banner */}
       <div className="px-4 sm:px-6 pt-4 max-w-7xl mx-auto w-full">
-        <div className="p-3 rounded-2xl bg-gradient-to-r from-zinc-900/90 to-violet-950/30 border border-zinc-800/80 flex items-center justify-between gap-3 text-xs">
-          <div className="flex items-center gap-2 text-zinc-300">
-            <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
+        <div className="p-3 rounded-2xl bg-gradient-to-r from-white to-violet-50 dark:from-zinc-900/90 dark:to-violet-950/30 border border-zinc-200 dark:border-zinc-800/80 flex items-center justify-between gap-3 text-xs shadow-sm dark:shadow-none">
+          <div className="flex items-center gap-2 text-zinc-700 dark:text-zinc-300">
+            <ShieldCheck className="w-4 h-4 text-emerald-500 dark:text-emerald-400 shrink-0" />
             <span>
               <strong>Confidentialité garantie :</strong> Vos stories live sont vues <strong>uniquement par vos contacts</strong> avec qui vous échangez.
             </span>
           </div>
-          <span className="hidden md:inline-block px-2 py-0.5 rounded-full bg-emerald-950 border border-emerald-500/30 text-emerald-400 text-[10px] font-bold">
+          <span className="hidden md:inline-block px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950 border border-emerald-500/30 text-emerald-700 dark:text-emerald-400 text-[10px] font-bold">
             24h / 24 Sécurisé
           </span>
         </div>
@@ -334,8 +334,8 @@ export function JourneeLiveView({
       <div className="p-4 sm:p-6 max-w-7xl mx-auto w-full space-y-8">
         {/* Section 1: Mon Statut Live */}
         <div>
-          <h3 className="text-sm font-bold text-zinc-300 uppercase tracking-wider mb-4 flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-pink-400" />
+          <h3 className="text-sm font-bold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider mb-4 flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-pink-500 dark:text-pink-400" />
             Ma Journée Live (24h)
           </h3>
 
@@ -347,13 +347,13 @@ export function JourneeLiveView({
                 setErrorMsg('');
                 setIsCreatingStory(true);
               }}
-              className="aspect-[9/16] rounded-3xl border-2 border-dashed border-zinc-700 hover:border-pink-500 bg-zinc-900/60 hover:bg-zinc-900 cursor-pointer flex flex-col items-center justify-center text-center p-4 transition group"
+              className="aspect-[9/16] rounded-3xl border-2 border-dashed border-zinc-300 dark:border-zinc-700 hover:border-pink-500 bg-white dark:bg-zinc-900/60 hover:bg-pink-50/40 dark:hover:bg-zinc-900 cursor-pointer flex flex-col items-center justify-center text-center p-4 transition group shadow-sm dark:shadow-none"
             >
               <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-pink-600 to-amber-500 flex items-center justify-center text-white shadow-lg shadow-pink-600/30 group-hover:scale-110 transition">
                 <Plus className="w-6 h-6" />
               </div>
-              <span className="mt-3 font-bold text-xs text-white">Poster en Live</span>
-              <span className="text-[10px] text-zinc-400 mt-1">Texte, Photo ou Vidéo</span>
+              <span className="mt-3 font-bold text-xs text-zinc-900 dark:text-white">Poster en Live</span>
+              <span className="text-[10px] text-zinc-500 dark:text-zinc-400 mt-1">Texte, Photo ou Vidéo</span>
             </div>
 
             {/* My Active Stories */}
@@ -413,8 +413,8 @@ export function JourneeLiveView({
         {/* Section 2: Journée Live de mes Contacts */}
         <div>
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-bold text-zinc-300 uppercase tracking-wider flex items-center gap-2">
-              <Radio className="w-4 h-4 text-violet-400" />
+            <h3 className="text-sm font-bold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider flex items-center gap-2">
+              <Radio className="w-4 h-4 text-violet-500 dark:text-violet-400" />
               Stories de mes Contacts ({otherStories.length})
             </h3>
             <span className="text-xs text-zinc-500 flex items-center gap-1">
@@ -423,9 +423,9 @@ export function JourneeLiveView({
           </div>
 
           {otherStories.length === 0 ? (
-            <div className="p-8 rounded-3xl bg-zinc-900/40 border border-zinc-800 text-center text-zinc-400">
+            <div className="p-8 rounded-3xl bg-white dark:bg-zinc-900/40 border border-zinc-200 dark:border-zinc-800 text-center text-zinc-500 dark:text-zinc-400 shadow-sm dark:shadow-none">
               <Sparkles className="w-10 h-10 text-pink-400/50 mx-auto mb-2" />
-              <h4 className="font-bold text-white text-sm mb-1">Aucune story de contact pour le moment</h4>
+              <h4 className="font-bold text-zinc-900 dark:text-white text-sm mb-1">Aucune story de contact pour le moment</h4>
               <p className="text-xs text-zinc-500 max-w-md mx-auto">
                 Vos contacts n'ont pas encore publié aujourd'hui. Dès qu'un de vos contacts publie un texte, une photo ou une vidéo, il apparaîtra ici !
               </p>
@@ -443,7 +443,7 @@ export function JourneeLiveView({
                       setActiveStoryIndex(globalIndex);
                       setStoryProgress(0);
                     }}
-                    className="aspect-[9/16] rounded-3xl overflow-hidden relative cursor-pointer group border border-zinc-800 hover:border-violet-500 transition shadow-md"
+                    className="aspect-[9/16] rounded-3xl overflow-hidden relative cursor-pointer group border border-zinc-200 dark:border-zinc-800 hover:border-violet-500 transition shadow-md"
                   >
                     {story.type === 'video' ? (
                       <video src={story.mediaUrl} className="w-full h-full object-cover" />
@@ -507,16 +507,16 @@ export function JourneeLiveView({
       {/* MODAL: PUBLISH NEW LIVE STORY */}
       {/* ==================================================== */}
       {isCreatingStory && (
-        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in">
-          <div className="relative w-full max-w-xl bg-zinc-950 border border-zinc-800 rounded-3xl p-6 text-white shadow-2xl overflow-y-auto max-h-[90vh]">
-            <div className="flex items-center justify-between pb-4 border-b border-zinc-800">
+        <div className="fixed inset-0 z-50 bg-black/60 dark:bg-black/85 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in">
+          <div className="relative w-full max-w-xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-6 text-zinc-900 dark:text-white shadow-2xl overflow-y-auto max-h-[90vh]">
+            <div className="flex items-center justify-between pb-4 border-b border-zinc-200 dark:border-zinc-800">
               <div className="flex items-center gap-2">
-                <span className="p-2 rounded-xl bg-pink-600/20 text-pink-400">
+                <span className="p-2 rounded-xl bg-pink-600/15 dark:bg-pink-600/20 text-pink-600 dark:text-pink-400">
                   <Radio className="w-5 h-5" />
                 </span>
                 <div>
-                  <h3 className="text-lg font-bold text-white">Publier dans Journée Live</h3>
-                  <p className="text-xs text-zinc-400">Visible pendant 24 heures par vos contacts</p>
+                  <h3 className="text-lg font-bold text-zinc-900 dark:text-white">Publier dans Journée Live</h3>
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400">Visible pendant 24 heures par vos contacts</p>
                 </div>
               </div>
               <button
@@ -525,7 +525,7 @@ export function JourneeLiveView({
                   setMediaPreview(null);
                   setTextContent('');
                 }}
-                className="p-1.5 rounded-full text-zinc-400 hover:text-white hover:bg-zinc-800 transition"
+                className="p-1.5 rounded-full text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 transition"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -533,7 +533,7 @@ export function JourneeLiveView({
 
             {/* Error banner */}
             {errorMsg && (
-              <div className="my-3 p-3 rounded-2xl bg-red-950/60 border border-red-500/40 text-red-300 text-xs flex items-center gap-2">
+              <div className="my-3 p-3 rounded-2xl bg-red-50 dark:bg-red-950/60 border border-red-300 dark:border-red-500/40 text-red-700 dark:text-red-300 text-xs flex items-center gap-2">
                 <AlertCircle className="w-4 h-4 shrink-0" />
                 <span>{errorMsg}</span>
               </div>
@@ -549,11 +549,11 @@ export function JourneeLiveView({
                 }}
                 className={`p-3 rounded-2xl border text-xs font-bold transition flex items-center justify-center gap-2 ${
                   storyMode === 'text'
-                    ? 'border-pink-500 bg-pink-950/40 text-pink-300 shadow-md shadow-pink-500/10'
-                    : 'border-zinc-800 bg-zinc-900 text-zinc-400 hover:text-white'
+                    ? 'border-pink-500 bg-pink-50 dark:bg-pink-950/40 text-pink-600 dark:text-pink-300 shadow-md shadow-pink-500/10'
+                    : 'border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white'
                 }`}
               >
-                <TypeIcon className="w-4 h-4 text-pink-400" />
+                <TypeIcon className="w-4 h-4 text-pink-500 dark:text-pink-400" />
                 <span>✍️ Texte</span>
               </button>
 
@@ -565,11 +565,11 @@ export function JourneeLiveView({
                 }}
                 className={`p-3 rounded-2xl border text-xs font-bold transition flex items-center justify-center gap-2 ${
                   storyMode === 'image'
-                    ? 'border-pink-500 bg-pink-950/40 text-pink-300 shadow-md shadow-pink-500/10'
-                    : 'border-zinc-800 bg-zinc-900 text-zinc-400 hover:text-white'
+                    ? 'border-pink-500 bg-pink-50 dark:bg-pink-950/40 text-pink-600 dark:text-pink-300 shadow-md shadow-pink-500/10'
+                    : 'border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white'
                 }`}
               >
-                <ImageIcon className="w-4 h-4 text-rose-400" />
+                <ImageIcon className="w-4 h-4 text-rose-500 dark:text-rose-400" />
                 <span>🖼️ Photo</span>
               </button>
 
@@ -581,11 +581,11 @@ export function JourneeLiveView({
                 }}
                 className={`p-3 rounded-2xl border text-xs font-bold transition flex items-center justify-center gap-2 ${
                   storyMode === 'video'
-                    ? 'border-pink-500 bg-pink-950/40 text-pink-300 shadow-md shadow-pink-500/10'
-                    : 'border-zinc-800 bg-zinc-900 text-zinc-400 hover:text-white'
+                    ? 'border-pink-500 bg-pink-50 dark:bg-pink-950/40 text-pink-600 dark:text-pink-300 shadow-md shadow-pink-500/10'
+                    : 'border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white'
                 }`}
               >
-                <Video className="w-4 h-4 text-amber-400" />
+                <Video className="w-4 h-4 text-amber-500 dark:text-amber-400" />
                 <span>🎬 Vidéo (30s)</span>
               </button>
             </div>
@@ -618,7 +618,7 @@ export function JourneeLiveView({
 
                 {/* Textarea */}
                 <div>
-                  <label className="block text-xs font-semibold text-zinc-400 mb-1.5 uppercase">
+                  <label className="block text-xs font-semibold text-zinc-500 dark:text-zinc-400 mb-1.5 uppercase">
                     Votre texte / pensée
                   </label>
                   <textarea
@@ -626,7 +626,7 @@ export function JourneeLiveView({
                     value={textContent}
                     onChange={(e) => setTextContent(e.target.value)}
                     placeholder="Écrivez ce que vous avez sur le cœur, une citation, un événement..."
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-900 border border-zinc-800 text-white text-sm focus:border-pink-500 focus:outline-none resize-none"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-white text-sm focus:border-pink-500 focus:outline-none resize-none"
                     maxLength={300}
                   />
                   <div className="flex items-center justify-between text-[11px] text-zinc-500 mt-1">
@@ -637,8 +637,8 @@ export function JourneeLiveView({
 
                 {/* Gradient Picker */}
                 <div>
-                  <label className="block text-xs font-semibold text-zinc-400 mb-2 uppercase flex items-center gap-1.5">
-                    <Palette className="w-3.5 h-3.5 text-pink-400" />
+                  <label className="block text-xs font-semibold text-zinc-500 dark:text-zinc-400 mb-2 uppercase flex items-center gap-1.5">
+                    <Palette className="w-3.5 h-3.5 text-pink-500 dark:text-pink-400" />
                     <span>Fond Dégradé</span>
                   </label>
                   <div className="grid grid-cols-4 gap-2">
@@ -648,7 +648,7 @@ export function JourneeLiveView({
                         type="button"
                         onClick={() => setSelectedGradient(preset.class)}
                         className={`h-10 rounded-xl bg-gradient-to-br ${preset.class} transition border-2 flex items-center justify-center ${
-                          selectedGradient === preset.class ? 'border-white scale-105 shadow-md' : 'border-transparent opacity-80 hover:opacity-100'
+                          selectedGradient === preset.class ? 'border-pink-500 dark:border-white scale-105 shadow-md' : 'border-transparent opacity-80 hover:opacity-100'
                         }`}
                         title={preset.label}
                       >
@@ -662,7 +662,7 @@ export function JourneeLiveView({
 
                 {/* Font Style Selector */}
                 <div>
-                  <label className="block text-xs font-semibold text-zinc-400 mb-2 uppercase">
+                  <label className="block text-xs font-semibold text-zinc-500 dark:text-zinc-400 mb-2 uppercase">
                     Style de police
                   </label>
                   <div className="grid grid-cols-4 gap-2">
@@ -678,8 +678,8 @@ export function JourneeLiveView({
                         onClick={() => setFontStyle(f.id as any)}
                         className={`p-2 rounded-xl border text-xs font-medium transition text-center ${
                           fontStyle === f.id
-                            ? 'border-pink-500 bg-pink-950/40 text-pink-300'
-                            : 'border-zinc-800 bg-zinc-900 text-zinc-400 hover:text-white'
+                            ? 'border-pink-500 bg-pink-50 dark:bg-pink-950/40 text-pink-600 dark:text-pink-300'
+                            : 'border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white'
                         }`}
                       >
                         {f.label}
@@ -696,20 +696,20 @@ export function JourneeLiveView({
                 {!mediaPreview ? (
                   <div
                     onClick={() => fileInputRef.current?.click()}
-                    className="aspect-[16/9] rounded-2xl border-2 border-dashed border-zinc-700 hover:border-pink-500 bg-zinc-900/60 cursor-pointer flex flex-col items-center justify-center p-6 text-center transition group"
+                    className="aspect-[16/9] rounded-2xl border-2 border-dashed border-zinc-300 dark:border-zinc-700 hover:border-pink-500 bg-zinc-50 dark:bg-zinc-900/60 cursor-pointer flex flex-col items-center justify-center p-6 text-center transition group"
                   >
-                    <div className="w-14 h-14 rounded-2xl bg-pink-600/20 text-pink-400 flex items-center justify-center mb-3 group-hover:scale-110 transition">
+                    <div className="w-14 h-14 rounded-2xl bg-pink-600/15 dark:bg-pink-600/20 text-pink-600 dark:text-pink-400 flex items-center justify-center mb-3 group-hover:scale-110 transition">
                       <Upload className="w-7 h-7" />
                     </div>
-                    <h4 className="font-bold text-sm text-white mb-1">
+                    <h4 className="font-bold text-sm text-zinc-900 dark:text-white mb-1">
                       {storyMode === 'video' ? 'Choisir une vidéo (30s max)' : 'Choisir une photo'}
                     </h4>
-                    <p className="text-xs text-zinc-400 max-w-xs">
+                    <p className="text-xs text-zinc-500 dark:text-zinc-400 max-w-xs">
                       Depuis la galerie de votre téléphone ou les fichiers de votre ordinateur.
                     </p>
                   </div>
                 ) : (
-                  <div className="relative aspect-[16/9] rounded-2xl overflow-hidden border border-zinc-700 bg-black">
+                  <div className="relative aspect-[16/9] rounded-2xl overflow-hidden border border-zinc-300 dark:border-zinc-700 bg-black">
                     {storyMode === 'video' ? (
                       <video src={mediaPreview} controls className="w-full h-full object-contain" />
                     ) : (
@@ -734,8 +734,8 @@ export function JourneeLiveView({
 
                 {/* Quality Selector */}
                 <div>
-                  <label className="block text-xs font-semibold text-zinc-400 mb-2 uppercase flex items-center gap-1.5">
-                    <Sliders className="w-3.5 h-3.5 text-pink-400" />
+                  <label className="block text-xs font-semibold text-zinc-500 dark:text-zinc-400 mb-2 uppercase flex items-center gap-1.5">
+                    <Sliders className="w-3.5 h-3.5 text-pink-500 dark:text-pink-400" />
                     <span>Qualité de diffusion</span>
                   </label>
                   <div className="grid grid-cols-3 gap-2">
@@ -744,8 +744,8 @@ export function JourneeLiveView({
                       onClick={() => setQuality('eco')}
                       className={`p-2.5 rounded-xl border text-xs font-bold transition flex flex-col items-center ${
                         quality === 'eco'
-                          ? 'border-pink-500 bg-pink-950/40 text-pink-300'
-                          : 'border-zinc-800 bg-zinc-900 text-zinc-400 hover:text-white'
+                          ? 'border-pink-500 bg-pink-50 dark:bg-pink-950/40 text-pink-600 dark:text-pink-300'
+                          : 'border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white'
                       }`}
                     >
                       <span>Économiseur</span>
@@ -757,8 +757,8 @@ export function JourneeLiveView({
                       onClick={() => setQuality('standard')}
                       className={`p-2.5 rounded-xl border text-xs font-bold transition flex flex-col items-center ${
                         quality === 'standard'
-                          ? 'border-pink-500 bg-pink-950/40 text-pink-300'
-                          : 'border-zinc-800 bg-zinc-900 text-zinc-400 hover:text-white'
+                          ? 'border-pink-500 bg-pink-50 dark:bg-pink-950/40 text-pink-600 dark:text-pink-300'
+                          : 'border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white'
                       }`}
                     >
                       <span>Standard</span>
@@ -770,8 +770,8 @@ export function JourneeLiveView({
                       onClick={() => setQuality('hd')}
                       className={`p-2.5 rounded-xl border text-xs font-bold transition flex flex-col items-center ${
                         quality === 'hd'
-                          ? 'border-pink-500 bg-pink-950/40 text-pink-300'
-                          : 'border-zinc-800 bg-zinc-900 text-zinc-400 hover:text-white'
+                          ? 'border-pink-500 bg-pink-50 dark:bg-pink-950/40 text-pink-600 dark:text-pink-300'
+                          : 'border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white'
                       }`}
                     >
                       <span>Haute Définition</span>
@@ -782,7 +782,7 @@ export function JourneeLiveView({
 
                 {/* Caption Input */}
                 <div>
-                  <label className="block text-xs font-semibold text-zinc-400 mb-1.5 uppercase">
+                  <label className="block text-xs font-semibold text-zinc-500 dark:text-zinc-400 mb-1.5 uppercase">
                     Légende / Message (optionnel)
                   </label>
                   <input
@@ -790,14 +790,14 @@ export function JourneeLiveView({
                     value={caption}
                     onChange={(e) => setCaption(e.target.value)}
                     placeholder="Ex: Belle journée avec l'équipe ! ☀️"
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-900 border border-zinc-800 text-white text-sm focus:border-pink-500 focus:outline-none"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-white text-sm focus:border-pink-500 focus:outline-none"
                   />
                 </div>
               </div>
             )}
 
             {/* Submit Actions */}
-            <div className="flex items-center justify-between pt-4 mt-5 border-t border-zinc-800">
+            <div className="flex items-center justify-between pt-4 mt-5 border-t border-zinc-200 dark:border-zinc-800">
               <button
                 type="button"
                 onClick={() => {
@@ -805,7 +805,7 @@ export function JourneeLiveView({
                   setMediaPreview(null);
                   setTextContent('');
                 }}
-                className="px-4 py-2 rounded-xl text-zinc-400 hover:text-white text-xs font-semibold"
+                className="px-4 py-2 rounded-xl text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white text-xs font-semibold"
               >
                 Annuler
               </button>
